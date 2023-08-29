@@ -1,31 +1,30 @@
-use crate::formatter_traits::FormatTokenAndNode;
-
-use crate::{
-    format_elements, space_token, token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
+use rome_formatter::write;
 
 use rome_js_syntax::JsLabeledStatementFields;
-use rome_js_syntax::{JsAnyStatement, JsLabeledStatement};
+use rome_js_syntax::{AnyJsStatement, JsLabeledStatement};
 
-impl ToFormatElement for JsLabeledStatement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsLabeledStatement;
+
+impl FormatNodeRule<JsLabeledStatement> for FormatJsLabeledStatement {
+    fn fmt_fields(&self, node: &JsLabeledStatement, f: &mut JsFormatter) -> FormatResult<()> {
         let JsLabeledStatementFields {
             label_token,
             colon_token,
             body,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let label = label_token.format(formatter)?;
-        let colon = colon_token.format(formatter)?;
+        write!(f, [label_token.format(), colon_token.format()])?;
 
-        let body = body?;
-        if matches!(body, JsAnyStatement::JsEmptyStatement(_)) {
-            // If the body is an empty statement, force semicolon insertion
-            let statement = body.format(formatter)?;
-            Ok(format_elements![label, colon, statement, token(";")])
-        } else {
-            let statement = body.format(formatter)?;
-            Ok(format_elements![label, colon, space_token(), statement])
+        match body? {
+            AnyJsStatement::JsEmptyStatement(empty) => {
+                // If the body is an empty statement, force semicolon insertion
+                write!(f, [empty.format(), text(";")])
+            }
+            body => {
+                write!(f, [space(), body.format()])
+            }
         }
     }
 }

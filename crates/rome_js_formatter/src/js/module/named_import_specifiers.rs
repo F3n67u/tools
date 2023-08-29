@@ -1,19 +1,43 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
 
+use rome_formatter::write;
 use rome_js_syntax::JsNamedImportSpecifiers;
 use rome_js_syntax::JsNamedImportSpecifiersFields;
 
-impl ToFormatElement for JsNamedImportSpecifiers {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsNamedImportSpecifiers;
+
+impl FormatNodeRule<JsNamedImportSpecifiers> for FormatJsNamedImportSpecifiers {
+    fn fmt_fields(&self, node: &JsNamedImportSpecifiers, f: &mut JsFormatter) -> FormatResult<()> {
         let JsNamedImportSpecifiersFields {
             l_curly_token,
             specifiers,
             r_curly_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let specifiers = specifiers.format(formatter)?;
+        write!(f, [l_curly_token.format()])?;
 
-        formatter.format_delimited_soft_block_spaces(&l_curly_token?, specifiers, &r_curly_token?)
+        if specifiers.is_empty() {
+            write!(
+                f,
+                [format_dangling_comments(node.syntax()).with_soft_block_indent()]
+            )?;
+        } else {
+            write!(
+                f,
+                [group(&soft_space_or_block_indent(&specifiers.format()))]
+            )?;
+        }
+
+        write!(f, [r_curly_token.format()])
+    }
+
+    fn fmt_dangling_comments(
+        &self,
+        _: &JsNamedImportSpecifiers,
+        _: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        // Handled inside of `fmt_fields`
+        Ok(())
     }
 }

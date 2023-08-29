@@ -1,46 +1,25 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::utils::format_with_semicolon;
-use crate::{
-    format_elements, hard_group_elements, space_token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::prelude::*;
+use crate::utils::FormatStatementSemicolon;
+
+use crate::js::declarations::function_declaration::FormatFunction;
+use rome_formatter::write;
 use rome_js_syntax::TsDeclareFunctionDeclaration;
-use rome_js_syntax::TsDeclareFunctionDeclarationFields;
 
-impl ToFormatElement for TsDeclareFunctionDeclaration {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let TsDeclareFunctionDeclarationFields {
-            async_token,
-            function_token,
-            id,
-            type_parameters,
-            parameters,
-            return_type_annotation,
-            semicolon_token,
-        } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsDeclareFunctionDeclaration;
 
-        let async_token = async_token.format_with_or_empty(formatter, |async_token| {
-            format_elements![async_token, space_token()]
-        })?;
-
-        let function_token = function_token.format(formatter)?;
-        let id = id.format(formatter)?;
-        let type_parameters = type_parameters.format_or_empty(formatter)?;
-        let parameters = parameters.format(formatter)?;
-        let return_type_annotation = return_type_annotation.format_or_empty(formatter)?;
-
-        Ok(hard_group_elements(format_with_semicolon(
-            formatter,
-            format_elements![
-                async_token,
-                function_token,
-                space_token(),
-                id,
-                type_parameters,
-                parameters,
-                return_type_annotation,
-            ],
-            semicolon_token,
-        )?))
+impl FormatNodeRule<TsDeclareFunctionDeclaration> for FormatTsDeclareFunctionDeclaration {
+    fn fmt_fields(
+        &self,
+        node: &TsDeclareFunctionDeclaration,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        write!(
+            f,
+            [
+                FormatFunction::from(node.clone()),
+                FormatStatementSemicolon::new(node.semicolon_token().as_ref())
+            ]
+        )
     }
 }

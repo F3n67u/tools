@@ -1,59 +1,66 @@
-use crate::{
-    concat_elements, empty_element, format_elements,
-    formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode},
-    group_elements, indent, join_elements, soft_line_break_or_space, token, FormatElement,
-    FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::JsVariableDeclaratorList;
+use crate::prelude::*;
+use rome_formatter::write;
+
+use rome_js_syntax::{JsSyntaxKind, JsVariableDeclaratorList};
 use rome_rowan::AstSeparatedList;
 
-impl ToFormatElement for JsVariableDeclaratorList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let last_index = self.len().saturating_sub(1);
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsVariableDeclaratorList;
 
-        let declarators = self
-            .elements()
-            .enumerate()
-            .map(|(index, element)| {
-                let node = element.node().format(formatter)?;
-                let separator = element.trailing_separator().format_with_or(
-                    formatter,
-                    |separator| {
-                        if index == last_index {
-                            Ok(empty_element())
-                        } else {
-                            Ok(separator)
-                        }
-                    },
-                    || {
-                        if index == last_index {
-                            Ok(empty_element())
-                        } else {
-                            Ok(token(","))
-                        }
-                    },
-                )?;
+impl FormatRule<JsVariableDeclaratorList> for FormatJsVariableDeclaratorList {
+    type Context = JsFormatContext;
 
-                Ok(format_elements![node, separator])
-            })
-            .collect::<FormatResult<Vec<_>>>()?;
+    fn fmt(&self, node: &JsVariableDeclaratorList, f: &mut JsFormatter) -> FormatResult<()> {
+        let length = node.len();
 
-        let mut items = declarators.into_iter();
+        let is_parent_for_loop = node.syntax().grand_parent().map_or(false, |grand_parent| {
+            matches!(
+                grand_parent.kind(),
+                JsSyntaxKind::JS_FOR_STATEMENT
+                    | JsSyntaxKind::JS_FOR_OF_STATEMENT
+                    | JsSyntaxKind::JS_FOR_IN_STATEMENT
+            )
+        });
 
-        let leading_element = items.next();
-        let trailing_elements = join_elements(soft_line_break_or_space(), items);
+        let has_any_initializer = node.iter().any(|declarator| {
+            declarator.map_or(false, |declarator| declarator.initializer().is_some())
+        });
 
-        Ok(group_elements(concat_elements(
-            leading_element
-                .into_iter()
-                .chain(if !trailing_elements.is_empty() {
-                    Some(indent(format_elements![
-                        soft_line_break_or_space(),
-                        trailing_elements
-                    ]))
-                } else {
-                    None
-                }),
-        )))
+        let format_separator = format_with(|f| {
+            if !is_parent_for_loop && has_any_initializer {
+                write!(f, [hard_line_break()])
+            } else {
+                write!(f, [soft_line_break_or_space()])
+            }
+        });
+
+        let mut declarators = node.iter().zip(
+            node.format_separated(",")
+                .with_trailing_separator(TrailingSeparator::Disallowed),
+        );
+
+        let (first_declarator, format_first_declarator) = match declarators.next() {
+            Some((syntax, format_first_declarator)) => (syntax?, format_first_declarator),
+            None => return Err(FormatError::SyntaxError),
+        };
+
+        if length == 1 && !f.comments().has_leading_comments(first_declarator.syntax()) {
+            return write!(f, [format_first_declarator]);
+        }
+
+        write!(
+            f,
+            [indent(&format_once(|f| {
+                write!(f, [format_first_declarator])?;
+
+                if length > 1 {
+                    write!(f, [format_separator])?;
+                }
+
+                f.join_with(&format_separator)
+                    .entries(declarators.map(|(_, format)| format))
+                    .finish()
+            }))]
+        )
     }
 }

@@ -1,24 +1,33 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::parentheses::NeedsParentheses;
+use rome_js_syntax::{AnyJsComputedMember, JsComputedMemberAssignment, JsSyntaxNode};
 
-use rome_js_syntax::JsComputedMemberAssignment;
-use rome_js_syntax::JsComputedMemberAssignmentFields;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsComputedMemberAssignment;
 
-impl ToFormatElement for JsComputedMemberAssignment {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsComputedMemberAssignmentFields {
-            object,
-            l_brack_token,
-            member,
-            r_brack_token,
-        } = self.as_fields();
+impl FormatNodeRule<JsComputedMemberAssignment> for FormatJsComputedMemberAssignment {
+    fn fmt_fields(
+        &self,
+        node: &JsComputedMemberAssignment,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        AnyJsComputedMember::from(node.clone()).fmt(f)
+    }
 
-        Ok(format_elements![
-            object.format(formatter)?,
-            l_brack_token.format(formatter)?,
-            member.format(formatter)?,
-            r_brack_token.format(formatter)?,
-        ])
+    fn needs_parentheses(&self, item: &JsComputedMemberAssignment) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for JsComputedMemberAssignment {
+    #[inline]
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+
+    #[inline]
+    fn needs_parentheses_with_parent(&self, _: &JsSyntaxNode) -> bool {
+        false
     }
 }

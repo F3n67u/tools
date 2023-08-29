@@ -1,15 +1,16 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-
-use crate::utils::format_with_semicolon;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
+use crate::utils::FormatStatementSemicolon;
+use rome_formatter::write;
 
 use rome_js_syntax::JsExportNamedFromClause;
 use rome_js_syntax::JsExportNamedFromClauseFields;
+use rome_rowan::{AstNode, AstSeparatedElement};
 
-impl ToFormatElement for JsExportNamedFromClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsExportNamedFromClause;
+
+impl FormatNodeRule<JsExportNamedFromClause> for FormatJsExportNamedFromClause {
+    fn fmt_fields(&self, node: &JsExportNamedFromClause, f: &mut JsFormatter) -> FormatResult<()> {
         let JsExportNamedFromClauseFields {
             type_token,
             l_curly_token,
@@ -19,37 +20,54 @@ impl ToFormatElement for JsExportNamedFromClause {
             source,
             assertion,
             semicolon_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let type_token = type_token
-            .format_with_or_empty(formatter, |token| format_elements![token, space_token()])?;
+        if let Some(type_token) = &type_token {
+            write!(f, [type_token.format(), space()])?;
+        }
 
-        let specifiers = specifiers.format(formatter)?;
+        write!(f, [l_curly_token.format(),])?;
 
-        let list = formatter.format_delimited_soft_block_spaces(
-            &l_curly_token?,
-            specifiers,
-            &r_curly_token?,
-        )?;
+        match specifiers.elements().next() {
+            Some(AstSeparatedElement {
+                node: Ok(node),
+                trailing_separator: Ok(separator),
+            }) if specifiers.len() == 1 && !f.comments().has_comments(node.syntax()) => {
+                write!(f, [space(), node.format()])?;
 
-        let from = from_token.format(formatter)?;
-        let source = source.format(formatter)?;
-        let assertion = assertion.format_with_or_empty(formatter, |assertion| {
-            format_elements![space_token(), assertion]
-        })?;
+                if let Some(separator) = separator {
+                    write!(f, [format_removed(&separator)])?;
+                }
 
-        format_with_semicolon(
-            formatter,
-            format_elements![
-                type_token,
-                list,
-                space_token(),
-                from,
-                space_token(),
-                source,
-                assertion,
-            ],
-            semicolon_token,
-        )
+                write!(f, [space()])?;
+            }
+            _ => {
+                if specifiers.syntax().has_leading_newline() {
+                    write!(f, [block_indent(&specifiers.format()),])?;
+                } else {
+                    write!(
+                        f,
+                        [group(&soft_space_or_block_indent(&specifiers.format())),]
+                    )?;
+                };
+            }
+        }
+
+        write![
+            f,
+            [
+                r_curly_token.format(),
+                space(),
+                from_token.format(),
+                space(),
+                source.format(),
+            ]
+        ]?;
+
+        if let Some(assertion) = &assertion {
+            write!(f, [space(), assertion.format()])?;
+        }
+
+        write!(f, [FormatStatementSemicolon::new(semicolon_token.as_ref())])
     }
 }

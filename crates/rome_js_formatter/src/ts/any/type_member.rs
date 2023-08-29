@@ -1,18 +1,21 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsAnyTypeMember;
-impl ToFormatElement for TsAnyTypeMember {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::TsCallSignatureTypeMember(node) => node.to_format_element(formatter),
-            Self::TsPropertySignatureTypeMember(node) => node.to_format_element(formatter),
-            Self::TsConstructSignatureTypeMember(node) => node.to_format_element(formatter),
-            Self::TsMethodSignatureTypeMember(node) => node.to_format_element(formatter),
-            Self::TsGetterSignatureTypeMember(node) => node.to_format_element(formatter),
-            Self::TsSetterSignatureTypeMember(node) => node.to_format_element(formatter),
-            Self::TsIndexSignatureTypeMember(node) => node.to_format_element(formatter),
-            Self::JsUnknownMember(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyTsTypeMember;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyTsTypeMember;
+impl FormatRule<AnyTsTypeMember> for FormatAnyTsTypeMember {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyTsTypeMember, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyTsTypeMember::TsCallSignatureTypeMember(node) => node.format().fmt(f),
+            AnyTsTypeMember::TsPropertySignatureTypeMember(node) => node.format().fmt(f),
+            AnyTsTypeMember::TsConstructSignatureTypeMember(node) => node.format().fmt(f),
+            AnyTsTypeMember::TsMethodSignatureTypeMember(node) => node.format().fmt(f),
+            AnyTsTypeMember::TsGetterSignatureTypeMember(node) => node.format().fmt(f),
+            AnyTsTypeMember::TsSetterSignatureTypeMember(node) => node.format().fmt(f),
+            AnyTsTypeMember::TsIndexSignatureTypeMember(node) => node.format().fmt(f),
+            AnyTsTypeMember::JsBogusMember(node) => node.format().fmt(f),
         }
     }
 }

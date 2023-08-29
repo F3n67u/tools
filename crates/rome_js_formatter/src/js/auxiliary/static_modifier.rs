@@ -1,11 +1,16 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+use rome_formatter::write;
+
 use rome_js_syntax::JsStaticModifier;
 use rome_js_syntax::JsStaticModifierFields;
 
-impl ToFormatElement for JsStaticModifier {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsStaticModifierFields { modifier_token } = self.as_fields();
-        modifier_token.format(formatter)
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsStaticModifier;
+
+impl FormatNodeRule<JsStaticModifier> for FormatJsStaticModifier {
+    fn fmt_fields(&self, node: &JsStaticModifier, f: &mut JsFormatter) -> FormatResult<()> {
+        let JsStaticModifierFields { modifier_token } = node.as_fields();
+
+        write![f, [modifier_token.format()]]
     }
 }

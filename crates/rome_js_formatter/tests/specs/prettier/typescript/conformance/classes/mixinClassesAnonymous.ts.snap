@@ -1,11 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 119
-expression: mixinClassesAnonymous.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: typescript/conformance/classes/mixinClassesAnonymous.ts
 ---
+
 # Input
-```js
+
+```ts
 type Constructor<T> = new(...args: any[]) => T;
 
 class Base {
@@ -73,9 +73,39 @@ const Timestamped = <CT extends Constructor<object>>(Base: CT) => {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,18 +1,11 @@
+ type Constructor<T> = new (...args: any[]) => T;
+ 
+ class Base {
+-  constructor(
+-    public x: number,
+-    public y: number,
+-  ) {}
++  constructor(public x: number, public y: number) {}
+ }
+ 
+ class Derived extends Base {
+-  constructor(
+-    x: number,
+-    y: number,
+-    public z: number,
+-  ) {
++  constructor(x: number, y: number, public z: number) {
+     super(x, y);
+   }
+ }
+```
+
 # Output
-```js
-type Constructor<T> = new(...args: any[]) => T;
+
+```ts
+type Constructor<T> = new (...args: any[]) => T;
 
 class Base {
   constructor(public x: number, public y: number) {}
@@ -140,7 +170,6 @@ const Timestamped = <CT extends Constructor<object>>(Base: CT) => {
     timestamp = new Date();
   };
 };
-
 ```
 
 

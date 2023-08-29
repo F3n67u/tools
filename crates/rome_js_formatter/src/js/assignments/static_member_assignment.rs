@@ -1,22 +1,29 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::js::expressions::static_member_expression::AnyJsStaticMemberLike;
+use crate::parentheses::NeedsParentheses;
+use crate::prelude::*;
+use rome_js_syntax::{JsStaticMemberAssignment, JsSyntaxNode};
 
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsStaticMemberAssignment;
 
-use rome_js_syntax::JsStaticMemberAssignment;
-use rome_js_syntax::JsStaticMemberAssignmentFields;
+impl FormatNodeRule<JsStaticMemberAssignment> for FormatJsStaticMemberAssignment {
+    fn fmt_fields(&self, node: &JsStaticMemberAssignment, f: &mut JsFormatter) -> FormatResult<()> {
+        AnyJsStaticMemberLike::from(node.clone()).fmt(f)
+    }
 
-impl ToFormatElement for JsStaticMemberAssignment {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsStaticMemberAssignmentFields {
-            object,
-            dot_token,
-            member,
-        } = self.as_fields();
+    fn needs_parentheses(&self, item: &JsStaticMemberAssignment) -> bool {
+        item.needs_parentheses()
+    }
+}
 
-        Ok(format_elements![
-            object.format(formatter)?,
-            dot_token.format(formatter)?,
-            member.format(formatter)?,
-        ])
+impl NeedsParentheses for JsStaticMemberAssignment {
+    #[inline]
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+
+    #[inline]
+    fn needs_parentheses_with_parent(&self, _: &JsSyntaxNode) -> bool {
+        false
     }
 }

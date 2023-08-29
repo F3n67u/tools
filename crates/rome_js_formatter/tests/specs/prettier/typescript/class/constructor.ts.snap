@@ -1,18 +1,16 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 125
-expression: constructor.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: typescript/class/constructor.ts
 ---
-# Input
-```js
-class foo {
-  constructor(static a: number) {}
-}
 
-class foo {
-  constructor(export a: number) {}
-}
+# Input
+
+```ts
+class C {constructor(override a: number) {}}
+class D {constructor(private a: number) {}}
+class E {constructor(protected a: number) {}}
+class F {constructor(public a: number) {}}
+class G {constructor(readonly a: number) {}}
 
 class A {
     'constructor': typeof A
@@ -27,14 +25,40 @@ class B {
 
 ```
 
-# Output
-```js
-class foo {
-  constructor(static a: number) {}
-}
 
-class foo {
-  constructor(export a: number) {}
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -15,7 +15,7 @@
+ }
+ 
+ class A {
+-  "constructor": typeof A;
++  'constructor': typeof A
+   static Foo() {
+     return new A();
+   }
+```
+
+# Output
+
+```ts
+class C {
+  constructor(override a: number) {}
+}
+class D {
+  constructor(private a: number) {}
+}
+class E {
+  constructor(protected a: number) {}
+}
+class F {
+  constructor(public a: number) {}
+}
+class G {
+  constructor(readonly a: number) {}
 }
 
 class A {
@@ -47,47 +71,48 @@ class A {
 class B {
   constructor<>() {}
 }
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: 'static' cannot appear on a parameter.
-  ┌─ constructor.ts:2:15
-  │
-2 │   constructor(static a: number) {}
-  │               ^^^^^^
+constructor.ts:8:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a parameter but instead found 'export'
-  ┌─ constructor.ts:6:15
-  │
-6 │   constructor(export a: number) {}
-  │               ^^^^^^ Expected a parameter here
+  × class properties may not be called `constructor`
+  
+     7 │ class A {
+   > 8 │     'constructor': typeof A
+       │     ^^^^^^^^^^^^^^^^^^^^^^^
+     9 │     static Foo() {
+    10 │         return new A()
+  
+constructor.ts:15:15 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `,` but instead found `a`
-  ┌─ constructor.ts:6:22
-  │
-6 │   constructor(export a: number) {}
-  │                      ^ unexpected
+  × expected a type parameter but instead found '>'
+  
+    14 │ class B {
+  > 15 │   constructor<>() {}
+       │               ^
+    16 │ }
+    17 │ 
+  
+  i Expected a type parameter here
+  
+    14 │ class B {
+  > 15 │   constructor<>() {}
+       │               ^
+    16 │ }
+    17 │ 
+  
+constructor.ts:15:14 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: class properties may not be called `constructor`
-   ┌─ constructor.ts:10:5
-   │
-10 │     'constructor': typeof A
-   │     ^^^^^^^^^^^^^^^^^^^^^^^
-
-error[SyntaxError]: expected a type parameter but instead found '>'
-   ┌─ constructor.ts:17:15
-   │
-17 │   constructor<>() {}
-   │               ^ Expected a type parameter here
-
-error[SyntaxError]: constructors cannot have type parameters.
-   ┌─ constructor.ts:17:14
-   │
-17 │   constructor<>() {}
-   │              ^^
-
+  × constructors cannot have type parameters.
+  
+    14 │ class B {
+  > 15 │   constructor<>() {}
+       │              ^^
+    16 │ }
+    17 │ 
+  
 
 ```
 

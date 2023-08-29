@@ -1,14 +1,32 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-
-use rome_js_syntax::JsNullLiteralExpression;
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
 use rome_js_syntax::JsNullLiteralExpressionFields;
+use rome_js_syntax::{JsNullLiteralExpression, JsSyntaxNode};
 
-impl ToFormatElement for JsNullLiteralExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsNullLiteralExpressionFields { value_token } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsNullLiteralExpression;
 
-        value_token.format(formatter)
+impl FormatNodeRule<JsNullLiteralExpression> for FormatJsNullLiteralExpression {
+    fn fmt_fields(&self, node: &JsNullLiteralExpression, f: &mut JsFormatter) -> FormatResult<()> {
+        let JsNullLiteralExpressionFields { value_token } = node.as_fields();
+
+        write![f, [value_token.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &JsNullLiteralExpression) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for JsNullLiteralExpression {
+    #[inline(always)]
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+    #[inline(always)]
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

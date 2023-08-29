@@ -1,12 +1,15 @@
 ---
-source: crates/rome_js_formatter/tests/spec_test.rs
-expression: switch.js
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: js/module/statement/switch.js
 ---
+
 # Input
+
+```js
 switch (key) {
 	case // comment
 	value:
-		
+
 	case value:
 		// fallthrough
 
@@ -19,16 +22,34 @@ switch (key) {
 
 }
 
+switch ("test") {
+  case "test": {}
+}
+
+```
+
+
 =============================
+
 # Outputs
+
 ## Output 1
+
 -----
 Indent style: Tab
 Line width: 80
 Quote style: Double Quotes
+JSX quote style: Double Quotes
+Quote properties: As needed
+Trailing comma: All
+Semicolons: Always
+Arrow parentheses: Always
 -----
+
+```js
 switch (key) {
-	case value: // comment
+	case // comment
+	value:
 
 	case value:
 	// fallthrough
@@ -39,4 +60,11 @@ switch (key) {
 	default:
 		break;
 }
+
+switch ("test") {
+	case "test": {
+	}
+}
+```
+
 

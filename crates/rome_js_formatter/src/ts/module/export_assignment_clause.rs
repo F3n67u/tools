@@ -1,27 +1,29 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::utils::format_with_semicolon;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
+use crate::utils::FormatStatementSemicolon;
+
+use rome_formatter::write;
 use rome_js_syntax::TsExportAssignmentClause;
 use rome_js_syntax::TsExportAssignmentClauseFields;
 
-impl ToFormatElement for TsExportAssignmentClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsExportAssignmentClause;
+
+impl FormatNodeRule<TsExportAssignmentClause> for FormatTsExportAssignmentClause {
+    fn fmt_fields(&self, node: &TsExportAssignmentClause, f: &mut JsFormatter) -> FormatResult<()> {
         let TsExportAssignmentClauseFields {
             eq_token,
             expression,
             semicolon_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        format_with_semicolon(
-            formatter,
-            format_elements![
-                eq_token.format(formatter)?,
-                space_token(),
-                expression.format(formatter)?,
-            ],
-            semicolon_token,
+        write!(
+            f,
+            [
+                eq_token.format(),
+                space(),
+                expression.format(),
+                FormatStatementSemicolon::new(semicolon_token.as_ref())
+            ]
         )
     }
 }

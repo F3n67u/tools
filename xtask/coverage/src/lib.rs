@@ -4,6 +4,7 @@ pub mod jsx;
 mod reporters;
 pub mod results;
 mod runner;
+pub mod symbols;
 pub mod ts;
 mod util;
 
@@ -16,9 +17,10 @@ use crate::reporters::{
 };
 use crate::runner::{run_test_suite, TestRunContext, TestSuite};
 use jsx::jsx_babel::BabelJsxTestSuite;
-use rome_js_parser::ParseDiagnostic;
+use rome_parser::diagnostic::ParseDiagnostic;
 use serde::{Deserialize, Serialize};
 use std::any::Any;
+use symbols::msts::SymbolsMicrosoftTestSuite;
 use ts::ts_babel::BabelTypescriptTestSuite;
 use ts::ts_microsoft::MicrosoftTypescriptTestSuite;
 use util::decode_maybe_utf16_string;
@@ -31,7 +33,7 @@ pub struct TestResult {
     pub test_case: String,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Copy, Clone)]
 pub enum Outcome {
     Passed,
     Failed,
@@ -122,10 +124,10 @@ pub fn run(
     json: bool,
     detail_level: SummaryDetailLevel,
 ) {
-    let mut reporters = MulticastTestReporter::new(Box::new(DefaultReporter::default()));
+    let mut reporters = MulticastTestReporter::new(Box::<DefaultReporter>::default());
 
     let output_target = if json {
-        reporters.add(Box::new(JsonReporter::default()));
+        reporters.add(Box::<JsonReporter>::default());
         OutputTarget::stderr()
     } else {
         OutputTarget::stdout()
@@ -136,7 +138,11 @@ pub fn run(
     let mut context = TestRunContext {
         filter: filter.map(|s| s.to_string()),
         reporter: &mut reporters,
-        pool: &yastl::Pool::new(num_cpus::get().max(2)),
+        pool: &yastl::Pool::new(
+            std::thread::available_parallelism()
+                .map_or(2, usize::from)
+                .max(2),
+        ),
     };
 
     let mut ran_any_tests = false;
@@ -156,6 +162,7 @@ const ALL_SUITES: &str = "*";
 const ALL_JS_SUITES: &str = "js";
 const ALL_TS_SUITES: &str = "ts";
 const ALL_JSX_SUITES: &str = "jsx";
+const ALL_SYMBOLS_SUITES: &str = "symbols";
 
 fn get_test_suites(suites: Option<&str>) -> Vec<Box<dyn TestSuite>> {
     let suites = suites.unwrap_or("*").to_lowercase();
@@ -168,12 +175,14 @@ fn get_test_suites(suites: Option<&str>) -> Vec<Box<dyn TestSuite>> {
             ALL_JS_SUITES | "javascript" => ids.extend(["js/262"]),
             ALL_TS_SUITES | "typescript" => ids.extend(["ts/microsoft", "ts/babel"]),
             ALL_JSX_SUITES => ids.extend(["jsx/babel"]),
-            ALL_SUITES => ids.extend(["js", "ts", "jsx"]),
+            ALL_SYMBOLS_SUITES => ids.extend(["symbols/microsoft"]),
+            ALL_SUITES => ids.extend(["js", "ts", "jsx", "symbols"]),
 
             "js/262" => suites.push(Box::new(Test262TestSuite)),
             "ts/microsoft" => suites.push(Box::new(MicrosoftTypescriptTestSuite)),
             "ts/babel" => suites.push(Box::new(BabelTypescriptTestSuite)),
             "jsx/babel" => suites.push(Box::new(BabelJsxTestSuite)),
+            "symbols/microsoft" => suites.push(Box::new(SymbolsMicrosoftTestSuite)),
 
             _ => {}
         }

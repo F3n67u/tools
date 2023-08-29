@@ -1,26 +1,52 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::utils::format_initializer_clause;
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+use rome_formatter::write;
+
+use crate::utils::FormatInitializerClause;
+
+use crate::js::bindings::parameters::{should_hug_function_parameters, FormatAnyJsParameters};
 use rome_js_syntax::JsFormalParameter;
 use rome_js_syntax::JsFormalParameterFields;
 
-impl ToFormatElement for JsFormalParameter {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsFormalParameter;
+
+impl FormatNodeRule<JsFormalParameter> for FormatJsFormalParameter {
+    fn fmt_fields(&self, node: &JsFormalParameter, f: &mut JsFormatter) -> FormatResult<()> {
         let JsFormalParameterFields {
+            decorators,
             binding,
             question_mark_token,
             type_annotation,
             initializer,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let type_annotation = type_annotation.format_or_empty(formatter)?;
-        let initializer = format_initializer_clause(formatter, initializer)?;
+        let content = format_with(|f| {
+            write![
+                f,
+                [
+                    binding.format(),
+                    question_mark_token.format(),
+                    type_annotation.format()
+                ]
+            ]
+        });
 
-        Ok(format_elements![
-            binding.format(formatter)?,
-            question_mark_token.format_or_empty(formatter)?,
-            type_annotation,
-            initializer
-        ])
+        let is_hug_parameter = node
+            .syntax()
+            .grand_parent()
+            .and_then(FormatAnyJsParameters::cast)
+            .map_or(false, |parameters| {
+                should_hug_function_parameters(&parameters, f.comments()).unwrap_or(false)
+            });
+
+        if is_hug_parameter && decorators.is_empty() {
+            write![f, [decorators.format(), content]]?;
+        } else if decorators.is_empty() {
+            write![f, [decorators.format(), group(&content)]]?;
+        } else {
+            write![f, [group(&decorators.format()), group(&content)]]?;
+        }
+
+        write![f, [FormatInitializerClause::new(initializer.as_ref())]]
     }
 }

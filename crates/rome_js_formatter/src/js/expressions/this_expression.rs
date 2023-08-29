@@ -1,14 +1,31 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
+use rome_formatter::write;
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-
-use rome_js_syntax::JsThisExpression;
+use crate::parentheses::NeedsParentheses;
 use rome_js_syntax::JsThisExpressionFields;
+use rome_js_syntax::{JsSyntaxNode, JsThisExpression};
 
-impl ToFormatElement for JsThisExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsThisExpressionFields { this_token } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsThisExpression;
 
-        this_token.format(formatter)
+impl FormatNodeRule<JsThisExpression> for FormatJsThisExpression {
+    fn fmt_fields(&self, node: &JsThisExpression, f: &mut JsFormatter) -> FormatResult<()> {
+        let JsThisExpressionFields { this_token } = node.as_fields();
+
+        write![f, [this_token.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &JsThisExpression) -> bool {
+        item.needs_parentheses()
+    }
+}
+impl NeedsParentheses for JsThisExpression {
+    #[inline(always)]
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+    #[inline(always)]
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

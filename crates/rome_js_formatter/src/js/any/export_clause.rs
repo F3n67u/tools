@@ -1,19 +1,22 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyExportClause;
-impl ToFormatElement for JsAnyExportClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsExportDefaultDeclarationClause(node) => node.to_format_element(formatter),
-            Self::JsExportDefaultExpressionClause(node) => node.to_format_element(formatter),
-            Self::JsExportNamedClause(node) => node.to_format_element(formatter),
-            Self::JsExportFromClause(node) => node.to_format_element(formatter),
-            Self::JsExportNamedFromClause(node) => node.to_format_element(formatter),
-            Self::JsAnyDeclarationClause(node) => node.to_format_element(formatter),
-            Self::TsExportAsNamespaceClause(node) => node.to_format_element(formatter),
-            Self::TsExportAssignmentClause(node) => node.to_format_element(formatter),
-            Self::TsExportDeclareClause(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyJsExportClause;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsExportClause;
+impl FormatRule<AnyJsExportClause> for FormatAnyJsExportClause {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsExportClause, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsExportClause::JsExportDefaultDeclarationClause(node) => node.format().fmt(f),
+            AnyJsExportClause::JsExportDefaultExpressionClause(node) => node.format().fmt(f),
+            AnyJsExportClause::JsExportNamedClause(node) => node.format().fmt(f),
+            AnyJsExportClause::JsExportFromClause(node) => node.format().fmt(f),
+            AnyJsExportClause::JsExportNamedFromClause(node) => node.format().fmt(f),
+            AnyJsExportClause::AnyJsDeclarationClause(node) => node.format().fmt(f),
+            AnyJsExportClause::TsExportAsNamespaceClause(node) => node.format().fmt(f),
+            AnyJsExportClause::TsExportAssignmentClause(node) => node.format().fmt(f),
+            AnyJsExportClause::TsExportDeclareClause(node) => node.format().fmt(f),
         }
     }
 }

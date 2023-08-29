@@ -1,56 +1,34 @@
-use crate::cursor::{free, GreenElement, NodeData, SyntaxElement, SyntaxToken, SyntaxTrivia};
-use crate::green::{Child, Children, Slot};
+use crate::cursor::{NodeData, SyntaxElement, SyntaxToken, SyntaxTrivia};
+use crate::green::{Child, Children, GreenElementRef, Slot};
 use crate::{
     Direction, GreenNode, GreenNodeData, NodeOrToken, RawSyntaxKind, SyntaxNodeText, TokenAtOffset,
     WalkEvent,
 };
-use std::borrow::Cow;
-use std::cell::Cell;
+use rome_text_size::{TextRange, TextSize};
 use std::hash::{Hash, Hasher};
 use std::iter::FusedIterator;
-use std::ops::Range;
-use std::{fmt, iter, ptr};
-use text_size::{TextRange, TextSize};
+use std::ops;
+use std::ptr::NonNull;
+use std::rc::Rc;
+use std::{fmt, iter};
 
+use super::{GreenElement, NodeKind, WeakGreenElement};
+
+#[derive(Clone)]
 pub(crate) struct SyntaxNode {
-    pub(super) ptr: ptr::NonNull<NodeData>,
-}
-
-impl Clone for SyntaxNode {
-    #[inline]
-    fn clone(&self) -> Self {
-        self.data().inc_rc();
-        SyntaxNode { ptr: self.ptr }
-    }
-}
-
-impl Drop for SyntaxNode {
-    #[inline]
-    fn drop(&mut self) {
-        if self.data().dec_rc() {
-            unsafe { free(self.ptr) }
-        }
-    }
+    pub(super) ptr: Rc<NodeData>,
 }
 
 impl SyntaxNode {
     pub(crate) fn new_root(green: GreenNode) -> SyntaxNode {
-        let green = GreenNode::into_raw(green);
-        let green = GreenElement::Node {
-            ptr: Cell::new(green),
-        };
         SyntaxNode {
-            ptr: NodeData::new(None, 0, 0.into(), green, false),
-        }
-    }
-
-    pub(crate) fn new_root_mut(green: GreenNode) -> SyntaxNode {
-        let green = GreenNode::into_raw(green);
-        let green = GreenElement::Node {
-            ptr: Cell::new(green),
-        };
-        SyntaxNode {
-            ptr: NodeData::new(None, 0, 0.into(), green, true),
+            ptr: NodeData::new(
+                NodeKind::Root {
+                    green: GreenElement::Node(green),
+                },
+                0,
+                0.into(),
+            ),
         }
     }
 
@@ -60,23 +38,15 @@ impl SyntaxNode {
         slot: u32,
         offset: TextSize,
     ) -> SyntaxNode {
-        let mutable = parent.data().mutable;
-        let green = GreenElement::Node {
-            ptr: Cell::new(green.into()),
-        };
         SyntaxNode {
-            ptr: NodeData::new(Some(parent), slot, offset, green, mutable),
-        }
-    }
-
-    pub fn clone_for_update(&self) -> SyntaxNode {
-        assert!(!self.data().mutable);
-        match self.parent() {
-            Some(parent) => {
-                let parent = parent.clone_for_update();
-                SyntaxNode::new_child(self.green_ref(), parent, self.data().slot(), self.offset())
-            }
-            None => SyntaxNode::new_root_mut(self.green_ref().to_owned()),
+            ptr: NodeData::new(
+                NodeKind::Child {
+                    green: WeakGreenElement::new(GreenElementRef::Node(green)),
+                    parent: parent.ptr,
+                },
+                slot,
+                offset,
+            ),
         }
     }
 
@@ -86,7 +56,7 @@ impl SyntaxNode {
 
     #[inline]
     pub(super) fn data(&self) -> &NodeData {
-        unsafe { self.ptr.as_ref() }
+        self.ptr.as_ref()
     }
 
     #[inline]
@@ -101,21 +71,14 @@ impl SyntaxNode {
 
     pub(crate) fn element_in_slot(&self, slot_index: u32) -> Option<SyntaxElement> {
         let slot = self
-            .green_ref()
             .slots()
             .nth(slot_index as usize)
             .expect("Slot index out of bounds");
 
-        slot.as_ref().map(|element| {
-            SyntaxElement::new(
-                element,
-                self.clone(),
-                slot_index,
-                self.offset() + slot.rel_offset(),
-            )
-        })
+        slot.map(|element| element)
     }
 
+    #[inline]
     pub(crate) fn slots(&self) -> SyntaxSlots {
         SyntaxSlots::new(self.clone())
     }
@@ -183,15 +146,12 @@ impl SyntaxNode {
     }
 
     #[inline]
-    pub(crate) fn green(&self) -> Cow<'_, GreenNodeData> {
-        let green_ref = self.green_ref();
-        match self.data().mutable {
-            false => Cow::Borrowed(green_ref),
-            true => Cow::Owned(green_ref.to_owned()),
-        }
+    pub(crate) fn key(&self) -> (NonNull<()>, TextSize) {
+        self.data().key()
     }
+
     #[inline]
-    fn green_ref(&self) -> &GreenNodeData {
+    pub(crate) fn green(&self) -> &GreenNodeData {
         self.data().green().into_node().unwrap()
     }
 
@@ -215,13 +175,27 @@ impl SyntaxNode {
         SyntaxElementChildren::new(self.clone())
     }
 
+    #[inline]
+    pub fn tokens(&self) -> impl Iterator<Item = SyntaxToken> + DoubleEndedIterator + '_ {
+        self.green().children().filter_map(|child| {
+            child.element().into_token().map(|token| {
+                SyntaxToken::new(
+                    token,
+                    self.clone(),
+                    child.slot(),
+                    self.offset() + child.rel_offset(),
+                )
+            })
+        })
+    }
+
     pub fn first_child(&self) -> Option<SyntaxNode> {
-        self.green_ref().children().find_map(|child| {
+        self.green().children().find_map(|child| {
             child.element().into_node().map(|green| {
                 SyntaxNode::new_child(
                     green,
                     self.clone(),
-                    child.slot() as u32,
+                    child.slot(),
                     self.offset() + child.rel_offset(),
                 )
             })
@@ -229,7 +203,7 @@ impl SyntaxNode {
     }
 
     pub fn last_child(&self) -> Option<SyntaxNode> {
-        self.green_ref().children().rev().find_map(|child| {
+        self.green().children().rev().find_map(|child| {
             child.element().into_node().map(|green| {
                 SyntaxNode::new_child(
                     green,
@@ -242,7 +216,7 @@ impl SyntaxNode {
     }
 
     pub fn first_child_or_token(&self) -> Option<SyntaxElement> {
-        self.green_ref().children().next().map(|child| {
+        self.green().children().next().map(|child| {
             SyntaxElement::new(
                 child.element(),
                 self.clone(),
@@ -252,7 +226,7 @@ impl SyntaxNode {
         })
     }
     pub fn last_child_or_token(&self) -> Option<SyntaxElement> {
-        self.green_ref().children().next_back().map(|child| {
+        self.green().children().next_back().map(|child| {
             SyntaxElement::new(
                 child.element(),
                 self.clone(),
@@ -277,11 +251,12 @@ impl SyntaxNode {
     }
 
     pub fn first_token(&self) -> Option<SyntaxToken> {
-        self.descendants_with_tokens().find_map(|x| x.into_token())
+        self.descendants_with_tokens(Direction::Next)
+            .find_map(|x| x.into_token())
     }
 
     pub fn last_token(&self) -> Option<SyntaxToken> {
-        PreorderWithTokens::reverse(self.clone())
+        PreorderWithTokens::new(self.clone(), Direction::Prev)
             .filter_map(|event| match event {
                 WalkEvent::Enter(it) => Some(it),
                 WalkEvent::Leave(_) => None,
@@ -318,11 +293,15 @@ impl SyntaxNode {
     }
 
     #[inline]
-    pub fn descendants_with_tokens(&self) -> impl Iterator<Item = SyntaxElement> {
-        self.preorder_with_tokens().filter_map(|event| match event {
-            WalkEvent::Enter(it) => Some(it),
-            WalkEvent::Leave(_) => None,
-        })
+    pub fn descendants_with_tokens(
+        &self,
+        direction: Direction,
+    ) -> impl Iterator<Item = SyntaxElement> {
+        self.preorder_with_tokens(direction)
+            .filter_map(|event| match event {
+                WalkEvent::Enter(it) => Some(it),
+                WalkEvent::Leave(_) => None,
+            })
     }
 
     #[inline]
@@ -331,8 +310,8 @@ impl SyntaxNode {
     }
 
     #[inline]
-    pub fn preorder_with_tokens(&self) -> PreorderWithTokens {
-        PreorderWithTokens::new(self.clone())
+    pub fn preorder_with_tokens(&self, direction: Direction) -> PreorderWithTokens {
+        PreorderWithTokens::new(self.clone(), direction)
     }
 
     pub(crate) fn preorder_slots(&self) -> SlotsPreorder {
@@ -356,8 +335,7 @@ impl SyntaxNode {
 
         let mut children = self.children_with_tokens().filter(|child| {
             let child_range = child.text_range();
-            !child_range.is_empty()
-                && (child_range.start() <= offset && offset <= child_range.end())
+            !child_range.is_empty() && child_range.contains_inclusive(offset)
         });
 
         let left = children.next().unwrap();
@@ -397,7 +375,7 @@ impl SyntaxNode {
 
     pub fn child_or_token_at_range(&self, range: TextRange) -> Option<SyntaxElement> {
         let rel_range = range - self.offset();
-        self.green_ref()
+        self.green()
             .slot_at_range(rel_range)
             .and_then(|(index, rel_offset, slot)| {
                 slot.as_ref().map(|green| {
@@ -411,33 +389,37 @@ impl SyntaxNode {
             })
     }
 
-    pub fn splice_children(&self, to_delete: Range<usize>, to_insert: Vec<SyntaxElement>) {
-        assert!(self.data().mutable, "immutable tree: {}", self);
-        for (i, child) in self.children_with_tokens().enumerate() {
-            if to_delete.contains(&i) {
-                child.detach();
-            }
-        }
-        let mut index = to_delete.start;
-        for child in to_insert {
-            self.attach_child(index, child);
-            index += 1;
+    #[must_use = "syntax elements are immutable, the result of update methods must be propagated to have any effect"]
+    pub fn detach(self) -> Self {
+        Self {
+            ptr: self.ptr.detach(),
         }
     }
 
-    pub fn detach(&self) {
-        assert!(self.data().mutable, "immutable tree: {}", self);
-        self.data().detach()
+    #[must_use = "syntax elements are immutable, the result of update methods must be propagated to have any effect"]
+    pub fn splice_slots<R, I>(self, range: R, replace_with: I) -> Self
+    where
+        R: ops::RangeBounds<usize>,
+        I: Iterator<Item = Option<SyntaxElement>>,
+    {
+        Self {
+            ptr: self.ptr.splice_slots(
+                range,
+                replace_with.into_iter().map(|element| {
+                    element.map(|child| match child.detach() {
+                        NodeOrToken::Node(it) => it.ptr.into_green(),
+                        NodeOrToken::Token(it) => it.into_green(),
+                    })
+                }),
+            ),
+        }
     }
 
-    fn attach_child(&self, index: usize, child: SyntaxElement) {
-        assert!(self.data().mutable, "immutable tree: {}", self);
-        child.detach();
-        let data = match &child {
-            NodeOrToken::Node(it) => it.data(),
-            NodeOrToken::Token(it) => it.data(),
-        };
-        self.data().attach_child(index, data)
+    #[must_use = "syntax elements are immutable, the result of update methods must be propagated to have any effect"]
+    pub fn replace_child(self, prev_elem: SyntaxElement, next_elem: SyntaxElement) -> Option<Self> {
+        Some(Self {
+            ptr: self.ptr.replace_child(prev_elem, next_elem)?,
+        })
     }
 }
 
@@ -469,7 +451,7 @@ impl fmt::Debug for SyntaxNode {
 
 impl fmt::Display for SyntaxNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.preorder_with_tokens()
+        self.preorder_with_tokens(Direction::Next)
             .filter_map(|event| match event {
                 WalkEvent::Enter(NodeOrToken::Token(token)) => Some(token),
                 _ => None,
@@ -503,6 +485,8 @@ impl Iterator for SyntaxNodeChildren {
     }
 }
 
+impl FusedIterator for SyntaxNodeChildren {}
+
 #[derive(Clone, Debug, Default)]
 pub(crate) struct SyntaxElementChildren {
     next: Option<SyntaxElement>,
@@ -525,6 +509,8 @@ impl Iterator for SyntaxElementChildren {
         })
     }
 }
+
+impl FusedIterator for SyntaxElementChildren {}
 
 pub(crate) struct Preorder {
     start: SyntaxNode,
@@ -585,6 +571,8 @@ impl Iterator for Preorder {
     }
 }
 
+impl FusedIterator for Preorder {}
+
 pub(crate) struct PreorderWithTokens {
     start: SyntaxElement,
     next: Option<WalkEvent<SyntaxElement>>,
@@ -593,22 +581,12 @@ pub(crate) struct PreorderWithTokens {
 }
 
 impl PreorderWithTokens {
-    fn new(start: SyntaxNode) -> PreorderWithTokens {
+    fn new(start: SyntaxNode, direction: Direction) -> PreorderWithTokens {
         let next = Some(WalkEvent::Enter(start.clone().into()));
         PreorderWithTokens {
             start: start.into(),
             next,
-            direction: Direction::Next,
-            skip_subtree: false,
-        }
-    }
-
-    fn reverse(start: SyntaxNode) -> PreorderWithTokens {
-        let next = Some(WalkEvent::Enter(start.clone().into()));
-        PreorderWithTokens {
-            start: start.into(),
-            next,
-            direction: Direction::Prev,
+            direction,
             skip_subtree: false,
         }
     }
@@ -668,6 +646,8 @@ impl Iterator for PreorderWithTokens {
     }
 }
 
+impl FusedIterator for PreorderWithTokens {}
+
 /// Represents a cursor to a green node slot. A slot either contains an element or is empty
 /// if the child isn't present in the source.
 #[derive(Debug, Clone)]
@@ -686,18 +666,52 @@ impl From<SyntaxElement> for SyntaxSlot {
     }
 }
 
+impl SyntaxSlot {
+    #[inline]
+    pub fn map<F, R>(self, mapper: F) -> Option<R>
+    where
+        F: FnOnce(SyntaxElement) -> R,
+    {
+        match self {
+            SyntaxSlot::Node(node) => Some(mapper(SyntaxElement::Node(node))),
+            SyntaxSlot::Token(token) => Some(mapper(SyntaxElement::Token(token))),
+            SyntaxSlot::Empty { .. } => None,
+        }
+    }
+}
+
 /// Iterator over a node's slots
 #[derive(Debug, Clone)]
 pub(crate) struct SyntaxSlots {
-    next_position: u32,
+    /// Position of the next element to return.
+    pos: u32,
+
+    /// Position of the last returned element from the back.
+    /// Initially points one element past the last slot.
+    ///
+    /// [nth_back]: https://doc.rust-lang.org/std/iter/trait.DoubleEndedIterator.html#method.nth_back
+    back_pos: u32,
     parent: SyntaxNode,
 }
 
 impl SyntaxSlots {
+    #[inline]
     fn new(parent: SyntaxNode) -> Self {
         Self {
-            next_position: 0,
+            pos: 0,
+            back_pos: parent.green().slice().len() as u32,
             parent,
+        }
+    }
+
+    /// Returns a slice containing the remaining elements to iterate over
+    /// an empty slice if the iterator reached the end.
+    #[inline]
+    fn slice(&self) -> &[Slot] {
+        if self.pos < self.back_pos {
+            &self.parent.green().slice()[self.pos as usize..self.back_pos as usize]
+        } else {
+            &[]
         }
     }
 
@@ -723,56 +737,70 @@ impl SyntaxSlots {
     }
 }
 
-impl<'a> Iterator for SyntaxSlots {
+impl Iterator for SyntaxSlots {
     type Item = SyntaxSlot;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let mut slots = self.parent.green_ref().slots();
-        let current_position = self.next_position as usize;
-        if current_position < slots.len() {
-            let next_slot = slots.nth(current_position);
-            self.next_position += 1;
-            next_slot.map(|slot| self.map_slot(slot, current_position as u32))
-        } else {
-            None
-        }
+        let slot = self.slice().first()?;
+        let mapped = self.map_slot(slot, self.pos);
+        self.pos += 1;
+        Some(mapped)
     }
 
-    fn last(self) -> Option<Self::Item>
+    #[inline(always)]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.slice().len();
+        (len, Some(len))
+    }
+
+    #[inline(always)]
+    fn count(self) -> usize
     where
         Self: Sized,
     {
-        let mut slots = self.parent.green_ref().slots();
-        let slots_len = slots.len() as usize;
-
-        if (self.next_position as usize) < slots_len {
-            let position = slots_len - 1;
-            slots
-                .nth(position)
-                .map(|slot| self.map_slot(slot, position as u32))
-        } else {
-            // already at/passed the end
-            None
-        }
+        self.len()
     }
 
+    #[inline]
+    fn last(mut self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        self.next_back()
+    }
+
+    #[inline]
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.next_position += n as u32;
+        self.pos += n as u32;
         self.next()
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.parent.green_ref().slots().size_hint()
     }
 }
 
 impl ExactSizeIterator for SyntaxSlots {
+    #[inline(always)]
     fn len(&self) -> usize {
-        self.parent.green_ref().slots().len()
+        self.slice().len()
     }
 }
 
 impl FusedIterator for SyntaxSlots {}
+
+impl DoubleEndedIterator for SyntaxSlots {
+    #[inline]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let slot = self.slice().last()?;
+        let mapped = self.map_slot(slot, self.back_pos - 1);
+        self.back_pos -= 1;
+        Some(mapped)
+    }
+
+    #[inline]
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        self.back_pos -= n as u32;
+        self.next_back()
+    }
+}
 
 /// Iterator to visit a node's slots in pre-order.
 pub(crate) struct SlotsPreorder {
@@ -828,6 +856,8 @@ impl Iterator for SlotsPreorder {
     }
 }
 
+impl FusedIterator for SlotsPreorder {}
+
 #[derive(Debug, Clone)]
 pub(crate) struct Siblings<'a> {
     parent: &'a GreenNodeData,
@@ -875,3 +905,55 @@ impl<'a> Siblings<'a> {
 }
 
 // endregion
+
+#[cfg(test)]
+mod tests {
+    use crate::raw_language::{RawLanguageKind, RawSyntaxTreeBuilder};
+
+    #[test]
+    fn slots_iter() {
+        let mut builder = RawSyntaxTreeBuilder::new();
+        builder.start_node(RawLanguageKind::EXPRESSION_LIST);
+
+        for number in [1, 2, 3, 4] {
+            builder.start_node(RawLanguageKind::LITERAL_EXPRESSION);
+            builder.token(RawLanguageKind::NUMBER_TOKEN, &number.to_string());
+            builder.finish_node();
+        }
+        builder.finish_node();
+
+        let list = builder.finish();
+
+        let mut iter = list.slots();
+
+        assert_eq!(iter.size_hint(), (4, Some(4)));
+
+        assert_eq!(
+            iter.next()
+                .and_then(|slot| slot.into_node())
+                .map(|node| node.text().to_string())
+                .as_deref(),
+            Some("1")
+        );
+
+        assert_eq!(iter.size_hint(), (3, Some(3)));
+
+        assert_eq!(
+            iter.next_back()
+                .and_then(|slot| slot.into_node())
+                .map(|node| node.text().to_string())
+                .as_deref(),
+            Some("4")
+        );
+
+        assert_eq!(iter.size_hint(), (2, Some(2)));
+
+        assert_eq!(
+            iter.last()
+                .and_then(|slot| slot.into_node())
+                .map(|node| node.text().to_string())
+                .as_deref(),
+            Some("3")
+        );
+    }
+}

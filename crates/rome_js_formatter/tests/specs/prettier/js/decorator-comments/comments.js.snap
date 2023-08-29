@@ -1,10 +1,10 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 144
-expression: comments.js
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: js/decorator-comments/comments.js
 ---
+
 # Input
+
 ```js
 class Something {
     @Annotateme()
@@ -14,24 +14,47 @@ class Something {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,5 +1,5 @@
+ class Something {
+   @Annotateme()
+-  // comment
+-  static property: Array<string>;
++    // comment
++    static property: Array<string>;
+ }
+```
+
 # Output
+
 ```js
 class Something {
   @Annotateme()
     // comment
     static property: Array<string>;
 }
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: return types can only be used in TypeScript files
-  ┌─ comments.js:4:20
-  │
-4 │     static property: Array<string>;
-  │                    ^^^^^^^^^^^^^^^ remove this type annotation
+comments.js:4:20 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × return types can only be used in TypeScript files
+  
+    2 │     @Annotateme()
+    3 │     // comment
+  > 4 │     static property: Array<string>;
+      │                    ^^^^^^^^^^^^^^^
+    5 │ }
+    6 │ 
+  
+  i remove this type annotation
+  
 
 ```
 

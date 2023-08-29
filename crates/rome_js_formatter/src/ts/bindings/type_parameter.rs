@@ -1,20 +1,33 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::TsTypeParameter;
+use crate::prelude::*;
 
-impl ToFormatElement for TsTypeParameter {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let name = self.name().format(formatter)?;
-        let constraint = self
-            .constraint()
-            .format_with_or_empty(formatter, |constraint| {
-                format_elements![space_token(), constraint]
-            })?;
-        let default = self.default().format_with_or_empty(formatter, |default| {
-            format_elements![space_token(), default]
-        })?;
-        Ok(format_elements![name, constraint, default])
+use rome_formatter::write;
+use rome_js_syntax::{TsTypeParameter, TsTypeParameterFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsTypeParameter;
+
+impl FormatNodeRule<TsTypeParameter> for FormatTsTypeParameter {
+    fn fmt_fields(&self, node: &TsTypeParameter, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsTypeParameterFields {
+            name,
+            constraint,
+            default,
+            modifiers,
+        } = node.as_fields();
+
+        if !modifiers.is_empty() {
+            write!(f, [modifiers.format(), space()])?;
+        }
+
+        write!(f, [name.format()])?;
+        if let Some(constraint) = constraint {
+            write!(f, [space(), constraint.format()])?;
+        }
+
+        if let Some(default) = default {
+            write!(f, [space(), default.format()])?;
+        }
+
+        Ok(())
     }
 }

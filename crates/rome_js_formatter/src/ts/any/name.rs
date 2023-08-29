@@ -1,12 +1,15 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsAnyName;
-impl ToFormatElement for TsAnyName {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsReferenceIdentifier(node) => node.to_format_element(formatter),
-            Self::TsQualifiedName(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyTsName;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyTsName;
+impl FormatRule<AnyTsName> for FormatAnyTsName {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyTsName, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyTsName::JsReferenceIdentifier(node) => node.format().fmt(f),
+            AnyTsName::TsQualifiedName(node) => node.format().fmt(f),
         }
     }
 }

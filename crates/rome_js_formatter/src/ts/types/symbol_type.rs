@@ -1,9 +1,26 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsSymbolType;
+use crate::prelude::*;
 
-impl ToFormatElement for TsSymbolType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        self.symbol_token().format(formatter)
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxNode, TsSymbolType, TsSymbolTypeFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsSymbolType;
+
+impl FormatNodeRule<TsSymbolType> for FormatTsSymbolType {
+    fn fmt_fields(&self, node: &TsSymbolType, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsSymbolTypeFields { symbol_token } = node.as_fields();
+
+        write![f, [symbol_token.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &TsSymbolType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsSymbolType {
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

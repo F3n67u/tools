@@ -1,4 +1,3 @@
-
 # Jobs run on pull request
 name: Pull request
 on:
@@ -7,6 +6,7 @@ on:
       - main
     paths: # Only run when changes are made to rust code or root Cargo
       - 'crates/**'
+      - 'fuzz/**'
       - 'xtask/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -25,14 +25,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Install toolchain
-        run: rustup show
-      - name: Cache
-        uses: Swatinem/rust-cache@v1
-      - name: Run rustfmt
-        uses: actions-rs/cargo@v1
+        uses: moonrepo/setup-rust@v0
         with:
-          command: fmt
-          args: --all --verbose -- --check
+          components: rustfmt
+          bins: taplo-cli
+      - name: Run format
+        run: |
+          cargo fmt --all --check
+          taplo fmt -- --locked
 
   lint:
     name: Lint Rust Files
@@ -43,40 +43,147 @@ jobs:
         with:
           submodules: false
       - name: Install toolchain
-        run: rustup show
-      - name: Cache
-        uses: Swatinem/rust-cache@v1
+        uses: moonrepo/setup-rust@v0
+        with:
+          components: clippy
       - name: Run cargo check
-        uses: actions-rs/cargo@v1
+        run: cargo lint
+
+  check-dependencies:
+    name: Check Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v3
         with:
-          command: check
-          args: --workspace --all-targets --release
-      - name: Run clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace --all-targets --verbose -- --deny warnings
+          submodules: false
+      - name: Install toolchain
+        run:  rustup toolchain install nightly
+      - name: Install udeps
+        run: cargo install cargo-udeps --locked
+      - name: Run udeps
+        run: cargo +nightly udeps
+
 
   test:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+          - os: ubuntu-latest
+
     name: Test
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: moonrepo/setup-rust@v0
+        with:
+          bins: cargo-nextest
+      - name: Run tests
+        run: cargo nextest run --workspace --verbose
+      - name: Run doctests
+        run: cargo test --doc
+
+  fuzz-all:
+    name: Build and init fuzzers
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Install toolchain
-        run: rustup show
-      - name: Cache
-        uses: Swatinem/rust-cache@v1
-      - name: Compile for tests
-        uses: actions-rs/cargo@v1
+        uses: moonrepo/setup-rust@v0
         with:
-          command: test
-          args: --no-run --workspace --verbose
-      - name: Run tests
-        uses: actions-rs/cargo@v1
-        env:
-          RUST_TEST_THREADS: 1
+          bins: cargo-fuzz
+      - name: Run init-fuzzer
+        run: bash fuzz/init-fuzzer.sh
+
+  test-node-api:
+    name: Test node.js API
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
         with:
-          command: test
-          args: --workspace --verbose
+          fetch-depth: 1
+      - name: Install toolchain
+        uses: moonrepo/setup-rust@v0
+      - name: Build main binary
+        run: cargo build -p rome_cli --release
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Cache pnpm modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-
+      - uses: pnpm/action-setup@v2.2.4
+        with:
+          version: 8
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: 'latest'
+      - name: Build TypeScript code
+        run: |
+          pnpm --prefix npm/backend-jsonrpc i
+          pnpm --prefix npm/backend-jsonrpc run build
+          pnpm --prefix npm/js-api run build:wasm-bundler
+          pnpm --prefix npm/js-api run build:wasm-node
+          pnpm --prefix npm/js-api run build:wasm-web
+          pnpm --prefix npm/js-api i
+          pnpm --prefix npm/js-api run build
+      - name: Run JS tests
+        run: |
+          pnpm --prefix npm/backend-jsonrpc test:ci
+          pnpm --prefix npm/js-api test:ci
+
+  documentation:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: moonrepo/setup-rust@v0
+      - name: Run doc command
+        run: cargo documentation
+
+  codegen:
+    name: Codegen
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: moonrepo/setup-rust@v0
+      - name: Run the grammar codegen
+        run: cargo codegen grammar
+      - name: Run the analyzer codegen
+        run: cargo codegen analyzer
+      - name: Run the configuration codegen
+        run: cargo codegen-configuration
+      - name: Run the schema codegen
+        run: cargo codegen-schema
+      - name: Run the bindings codegen
+        run: cargo codegen-bindings
+      - name: Run the website codegen
+        run: |
+          cargo lintdoc
+          cargo codegen-website
+      - name: Check for git diff
+        run: |
+          if [[ `git status --porcelain` ]]; then
+            git status
+            exit 1
+          fi

@@ -1,27 +1,18 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::utils::format_with_semicolon;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
 
+use crate::js::statements::return_statement::AnyJsStatementWithArgument;
 use rome_js_syntax::JsThrowStatement;
-use rome_js_syntax::JsThrowStatementFields;
 
-impl ToFormatElement for JsThrowStatement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsThrowStatementFields {
-            throw_token,
-            argument,
-            semicolon_token,
-        } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsThrowStatement;
 
-        let throw_token = throw_token.format(formatter)?;
-        let exception = argument.format(formatter)?;
+impl FormatNodeRule<JsThrowStatement> for FormatJsThrowStatement {
+    fn fmt_fields(&self, node: &JsThrowStatement, f: &mut JsFormatter) -> FormatResult<()> {
+        AnyJsStatementWithArgument::from(node.clone()).fmt(f)
+    }
 
-        format_with_semicolon(
-            formatter,
-            format_elements![throw_token, space_token(), exception],
-            semicolon_token,
-        )
+    fn fmt_dangling_comments(&self, _: &JsThrowStatement, _: &mut JsFormatter) -> FormatResult<()> {
+        // Formatted inside of `JsAnyStatementWithArgument`
+        Ok(())
     }
 }

@@ -1,30 +1,55 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::group_elements;
-use crate::{
-    format_elements, soft_block_indent, soft_line_break_or_space, space_token, FormatElement,
-    FormatResult, Formatter, ToFormatElement,
-};
-use rome_formatter::join_elements;
+use crate::prelude::*;
+
+use crate::jsx::tag::opening_element::AnyJsxOpeningElement;
+
+use crate::utils::jsx::is_jsx_suppressed;
 use rome_js_syntax::JsxSelfClosingElement;
 
-impl ToFormatElement for JsxSelfClosingElement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let attributes = join_elements(
-            soft_line_break_or_space(),
-            formatter.format_nodes(self.attributes())?,
+#[derive(Debug, Clone, Default)]
+pub struct FormatJsxSelfClosingElement;
+
+impl FormatNodeRule<JsxSelfClosingElement> for FormatJsxSelfClosingElement {
+    fn fmt_fields(&self, node: &JsxSelfClosingElement, f: &mut JsFormatter) -> FormatResult<()> {
+        AnyJsxOpeningElement::from(node.clone()).fmt(f)
+    }
+
+    fn is_suppressed(&self, node: &JsxSelfClosingElement, f: &JsFormatter) -> bool {
+        is_jsx_suppressed(&node.clone().into(), f.comments())
+    }
+
+    fn fmt_leading_comments(
+        &self,
+        node: &JsxSelfClosingElement,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        debug_assert!(
+            !f.comments().has_leading_comments(node.syntax()),
+            "JsxSelfClosingElement can not have comments."
         );
+        Ok(())
+    }
 
-        let type_arguments = self.type_arguments().format_or_empty(formatter)?;
+    fn fmt_dangling_comments(
+        &self,
+        node: &JsxSelfClosingElement,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        debug_assert!(
+            !f.comments().has_dangling_comments(node.syntax()),
+            "JsxSelfClosingElement can not have comments."
+        );
+        Ok(())
+    }
 
-        Ok(format_elements![
-            self.l_angle_token().format(formatter)?,
-            self.name().format(formatter)?,
-            type_arguments,
-            space_token(),
-            group_elements(soft_block_indent(attributes)),
-            space_token(),
-            self.slash_token().format(formatter)?,
-            self.r_angle_token().format(formatter)?
-        ])
+    fn fmt_trailing_comments(
+        &self,
+        node: &JsxSelfClosingElement,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        debug_assert!(
+            !f.comments().has_trailing_comments(node.syntax()),
+            "JsxSelfClosingElement can not have comments."
+        );
+        Ok(())
     }
 }

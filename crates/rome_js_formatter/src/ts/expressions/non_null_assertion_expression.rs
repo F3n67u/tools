@@ -1,18 +1,36 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsNonNullAssertionExpression;
-use rome_js_syntax::TsNonNullAssertionExpressionFields;
+use crate::prelude::*;
 
-impl ToFormatElement for TsNonNullAssertionExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+use crate::js::expressions::static_member_expression::member_chain_callee_needs_parens;
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxKind, TsNonNullAssertionExpressionFields};
+use rome_js_syntax::{JsSyntaxNode, TsNonNullAssertionExpression};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsNonNullAssertionExpression;
+
+impl FormatNodeRule<TsNonNullAssertionExpression> for FormatTsNonNullAssertionExpression {
+    fn fmt_fields(
+        &self,
+        node: &TsNonNullAssertionExpression,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
         let TsNonNullAssertionExpressionFields {
             expression,
             excl_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            expression.format(formatter)?,
-            excl_token.format(formatter)?
-        ])
+        write![f, [expression.format(), excl_token.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &TsNonNullAssertionExpression) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsNonNullAssertionExpression {
+    fn needs_parentheses_with_parent(&self, parent: &JsSyntaxNode) -> bool {
+        matches!(parent.kind(), JsSyntaxKind::JS_EXTENDS_CLAUSE)
+            || member_chain_callee_needs_parens(self.clone().into(), parent)
     }
 }

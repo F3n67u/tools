@@ -8,6 +8,8 @@ on:
     paths: # Only run when changes are made to js code
       - 'website/**'
       - 'editors/**'
+      - 'crates/**'
+      - 'npm/js-api/**'
 
 env:
   RUST_LOG: info
@@ -15,16 +17,47 @@ env:
 
 jobs:
   format-js:
-    name: Format JS Files
+    name: Check JS Files
     runs-on: ubuntu-latest
     steps:
-      - name: Install Rome
-        uses: rome/setup-rome@v0.1
-        with:
-          version: preview
-
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "cli-release"
 
       - name: Run Rome Format
-        run: rome format --ci editors website
+        run: cargo rome-cli ci editors website npm/js-api
+  type-check:
+    name: Type-check JS Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v3
+        with:
+          submodules: false
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - name: Cache pnpm modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-
+      - uses: pnpm/action-setup@v2.2.4
+        with:
+          version: 8
+      - name: Install toolchain
+        uses: moonrepo/setup-rust@v0
+      - name: Build WASM module for the web
+        run: wasm-pack build --out-dir ../../npm/wasm-web --target web --scope rometools crates/rome_wasm
+      - name: Install libraries
+        working-directory: website
+        run: pnpm i
+      - name: Build JS
+        working-directory: website
+        run: pnpm build:js
+      - name: Type check
+        working-directory: website
+        run: pnpm tsc

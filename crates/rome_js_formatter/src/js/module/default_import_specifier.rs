@@ -1,20 +1,19 @@
-use crate::formatter_traits::FormatTokenAndNode;
-
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+use rome_formatter::write;
 
 use rome_js_syntax::JsDefaultImportSpecifier;
 use rome_js_syntax::JsDefaultImportSpecifierFields;
 
-impl ToFormatElement for JsDefaultImportSpecifier {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsDefaultImportSpecifier;
+
+impl FormatNodeRule<JsDefaultImportSpecifier> for FormatJsDefaultImportSpecifier {
+    fn fmt_fields(&self, node: &JsDefaultImportSpecifier, f: &mut JsFormatter) -> FormatResult<()> {
         let JsDefaultImportSpecifierFields {
             local_name,
             trailing_comma_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            local_name.format(formatter)?,
-            trailing_comma_token.format(formatter)?
-        ])
+        write![f, [local_name.format(), trailing_comma_token.format()]]
     }
 }

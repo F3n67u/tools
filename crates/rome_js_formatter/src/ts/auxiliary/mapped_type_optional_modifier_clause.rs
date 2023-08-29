@@ -1,18 +1,25 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::TsMappedTypeOptionalModifierClause;
 use rome_js_syntax::TsMappedTypeOptionalModifierClauseFields;
 
-impl ToFormatElement for TsMappedTypeOptionalModifierClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsMappedTypeOptionalModifierClause;
+
+impl FormatNodeRule<TsMappedTypeOptionalModifierClause>
+    for FormatTsMappedTypeOptionalModifierClause
+{
+    fn fmt_fields(
+        &self,
+        node: &TsMappedTypeOptionalModifierClause,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
         let TsMappedTypeOptionalModifierClauseFields {
             operator_token,
             question_mark_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            operator_token.format(formatter)?,
-            question_mark_token.format(formatter)?
-        ])
+        write![f, [operator_token.format(), question_mark_token.format()]]
     }
 }

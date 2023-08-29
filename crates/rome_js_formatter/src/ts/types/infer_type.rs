@@ -1,13 +1,60 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::TsInferType;
+use crate::prelude::*;
 
-impl ToFormatElement for TsInferType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let infer = self.infer_token().format(formatter)?;
-        let type_parameter = self.type_parameter().format(formatter)?;
-        Ok(format_elements![infer, space_token(), type_parameter])
+use crate::parentheses::{operator_type_or_higher_needs_parens, NeedsParentheses};
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxKind, JsSyntaxNode, TsInferType, TsInferTypeFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsInferType;
+
+impl FormatNodeRule<TsInferType> for FormatTsInferType {
+    fn fmt_fields(&self, node: &TsInferType, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsInferTypeFields {
+            infer_token,
+            name,
+            constraint,
+        } = node.as_fields();
+
+        write!(f, [infer_token.format(), space(), name.format()])?;
+
+        if let Some(constraint) = constraint {
+            write!(f, [space(), constraint.format()])?;
+        }
+
+        Ok(())
+    }
+
+    fn needs_parentheses(&self, item: &TsInferType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsInferType {
+    fn needs_parentheses_with_parent(&self, parent: &JsSyntaxNode) -> bool {
+        if parent.kind() == JsSyntaxKind::TS_REST_TUPLE_TYPE_ELEMENT {
+            false
+        } else {
+            operator_type_or_higher_needs_parens(self.syntax(), parent)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::{assert_needs_parentheses, assert_not_needs_parentheses};
+    use rome_js_syntax::TsInferType;
+
+    #[test]
+    fn needs_parentheses() {
+        assert_needs_parentheses!("let s: (infer string)[] = symbol();", TsInferType);
+
+        assert_needs_parentheses!("let s: unique (infer string);", TsInferType);
+
+        assert_not_needs_parentheses!("let s: [number, ...infer string]", TsInferType);
+        assert_needs_parentheses!("let s: [(infer string)?]", TsInferType);
+
+        assert_needs_parentheses!("let s: (infer string)[a]", TsInferType);
+        assert_not_needs_parentheses!("let s: a[(infer string)]", TsInferType);
     }
 }

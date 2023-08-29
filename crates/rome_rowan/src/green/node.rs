@@ -3,18 +3,20 @@ use std::fmt::Formatter;
 use std::iter::Enumerate;
 use std::{
     borrow::{Borrow, Cow},
-    fmt, iter,
+    fmt,
     iter::FusedIterator,
     mem::{self, ManuallyDrop},
     ops, ptr, slice,
 };
+
+#[cfg(target_pointer_width = "64")]
+use crate::utility_types::static_assert;
 
 use countme::Count;
 
 use crate::{
     arc::{Arc, HeaderSlice, ThinArc},
     green::{GreenElement, GreenElementRef, RawSyntaxKind},
-    utility_types::static_assert,
     GreenToken, NodeOrToken, TextRange, TextSize,
 };
 
@@ -23,6 +25,10 @@ pub(super) struct GreenNodeHead {
     kind: RawSyntaxKind,
     text_len: TextSize,
     _c: Count<GreenNode>,
+}
+
+pub(crate) fn has_live() -> bool {
+    countme::get::<GreenNode>().live > 0
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -91,7 +97,7 @@ impl ToOwned for GreenNodeData {
 impl Borrow<GreenNodeData> for GreenNode {
     #[inline]
     fn borrow(&self) -> &GreenNodeData {
-        &*self
+        self
     }
 }
 
@@ -99,6 +105,13 @@ impl From<Cow<'_, GreenNodeData>> for GreenNode {
     #[inline]
     fn from(cow: Cow<'_, GreenNodeData>) -> Self {
         cow.into_owned()
+    }
+}
+
+impl From<&'_ GreenNodeData> for GreenNode {
+    #[inline]
+    fn from(borrow: &'_ GreenNodeData) -> Self {
+        borrow.to_owned()
     }
 }
 
@@ -114,14 +127,14 @@ impl fmt::Debug for GreenNodeData {
 
 impl fmt::Debug for GreenNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let data: &GreenNodeData = &*self;
+        let data: &GreenNodeData = self;
         fmt::Debug::fmt(data, f)
     }
 }
 
 impl fmt::Display for GreenNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let data: &GreenNodeData = &*self;
+        let data: &GreenNodeData = self;
         fmt::Display::fmt(data, f)
     }
 }
@@ -142,7 +155,7 @@ impl GreenNodeData {
     }
 
     #[inline]
-    fn slice(&self) -> &[Slot] {
+    pub(crate) fn slice(&self) -> &[Slot] {
         self.data.slice()
     }
 
@@ -192,36 +205,11 @@ impl GreenNodeData {
         Some((idx, slot.rel_offset(), slot))
     }
 
-    /// Replaces the child in a slot with a new element or removes it
-    #[must_use]
-    pub fn replace_child(&self, index: usize, replacement: Option<GreenElement>) -> GreenNode {
-        let mut replacement = replacement;
-        let slots = self.slots().enumerate().map(|(i, child)| {
-            if i == index {
-                replacement.take()
-            } else {
-                child.as_ref().map(|elem| elem.to_owned())
-            }
-        });
-        GreenNode::new(self.kind(), slots)
-    }
-
-    #[must_use]
-    pub fn insert_slot(&self, index: usize, new_slot: Option<GreenElement>) -> GreenNode {
-        // https://github.com/rust-lang/rust/issues/34433
-        self.splice_slots(index..index, iter::once(new_slot))
-    }
-
-    #[must_use]
-    pub fn remove_slot(&self, index: usize) -> GreenNode {
-        self.splice_slots(index..=index, iter::empty())
-    }
-
-    #[must_use]
-    pub fn splice_slots<R, I>(&self, range: R, replace_with: I) -> GreenNode
+    #[must_use = "syntax elements are immutable, the result of update methods must be propagated to have any effect"]
+    pub(crate) fn splice_slots<R, I>(&self, range: R, replace_with: I) -> GreenNode
     where
         R: ops::RangeBounds<usize>,
-        I: IntoIterator<Item = Option<GreenElement>>,
+        I: Iterator<Item = Option<GreenElement>>,
     {
         let mut slots: Vec<_> = self
             .slots()
@@ -294,10 +282,10 @@ impl GreenNode {
     }
 
     #[inline]
-    pub(crate) fn into_raw(this: GreenNode) -> ptr::NonNull<GreenNodeData> {
-        let green = ManuallyDrop::new(this);
-        let green: &GreenNodeData = &*green;
-        ptr::NonNull::from(&*green)
+    pub(crate) fn into_raw(self) -> ptr::NonNull<GreenNodeData> {
+        // SAFETY: casting from `HeaderSlice<GreenNodeHead, [green::node::Slot]>` to `GreenNodeData`
+        // if safe since `GreenNodeData` is marked as `repr(transparent)`
+        Arc::from_thin(self.ptr).into_raw().cast()
     }
 
     #[inline]

@@ -1,11 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 119
-expression: mixinClassesAnnotated.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: typescript/conformance/classes/mixinClassesAnnotated.ts
 ---
+
 # Input
-```js
+
+```ts
 // @declaration: true
 
 type Constructor<T> = new(...args: any[]) => T;
@@ -69,11 +69,41 @@ class Thing3 extends Thing2 {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -3,18 +3,11 @@
+ type Constructor<T> = new (...args: any[]) => T;
+ 
+ class Base {
+-  constructor(
+-    public x: number,
+-    public y: number,
+-  ) {}
++  constructor(public x: number, public y: number) {}
+ }
+ 
+ class Derived extends Base {
+-  constructor(
+-    x: number,
+-    y: number,
+-    public z: number,
+-  ) {
++  constructor(x: number, y: number, public z: number) {
+     super(x, y);
+   }
+ }
+```
+
 # Output
-```js
+
+```ts
 // @declaration: true
 
-type Constructor<T> = new(...args: any[]) => T;
+type Constructor<T> = new (...args: any[]) => T;
 
 class Base {
   constructor(public x: number, public y: number) {}
@@ -85,10 +115,9 @@ class Derived extends Base {
   }
 }
 
-const Printable = <T extends Constructor<Base>>(superClass: T):
-  & Constructor<Printable>
-  & { message: string }
-  & T =>
+const Printable = <T extends Constructor<Base>>(
+  superClass: T,
+): Constructor<Printable> & { message: string } & T =>
   class extends superClass {
     static message = "hello";
     print() {
@@ -96,9 +125,9 @@ const Printable = <T extends Constructor<Base>>(superClass: T):
     }
   };
 
-function Tagged<T extends Constructor<{}>>(superClass: T):
-  & Constructor<Tagged>
-  & T {
+function Tagged<T extends Constructor<{}>>(
+  superClass: T,
+): Constructor<Tagged> & T {
   class C extends superClass {
     _tag: string;
     constructor(...args: any[]) {
@@ -135,7 +164,6 @@ class Thing3 extends Thing2 {
     this.print();
   }
 }
-
 ```
 
 

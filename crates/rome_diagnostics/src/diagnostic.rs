@@ -1,427 +1,194 @@
-use crate::suggestion::SuggestionChange;
-use crate::{
-    file::{FileId, FileSpan, Span},
-    Applicability, CodeSuggestion, DiagnosticTag, Severity, SuggestionStyle,
-};
-use rome_text_edit::*;
+use std::{convert::Infallible, fmt::Debug, io};
 
-/// A diagnostic message that can give information
-/// like errors or warnings.
-#[derive(Debug, Clone, PartialEq, Hash)]
-pub struct Diagnostic {
-    pub file_id: FileId,
+use bitflags::bitflags;
+use serde::{Deserialize, Serialize};
 
-    pub severity: Severity,
-    pub code: Option<String>,
-    pub title: String,
-    pub tag: Option<DiagnosticTag>,
+use rome_console::fmt;
 
-    pub primary: Option<SubDiagnostic>,
-    pub children: Vec<SubDiagnostic>,
-    pub suggestions: Vec<CodeSuggestion>,
-    pub footers: Vec<Footer>,
+use crate::{Category, Location, Visit};
+
+/// The `Diagnostic` trait defines the metadata that can be exposed by error
+/// types in order to print details diagnostics in the console of the editor
+///
+/// ## Implementation
+///
+/// Most types should not have to implement this trait manually, and should
+/// instead rely on the `Diagnostic` derive macro also provided by this crate:
+///
+/// ```
+/// # use rome_diagnostics::Diagnostic;
+/// #[derive(Debug, Diagnostic)]
+/// #[diagnostic(category = "lint/style/noShoutyConstants", tags(FIXABLE))]
+/// struct ExampleDiagnostic {
+///     #[message]
+///     #[description]
+///     message: String,
+/// }
+/// ```
+pub trait Diagnostic: Debug {
+    /// The category of a diagnostic uniquely identifying this
+    /// diagnostic type, such as `lint/correctness/noArguments`, `args/invalid`
+    /// or `format/disabled`.
+    fn category(&self) -> Option<&'static Category> {
+        None
+    }
+
+    /// The severity defines whether this diagnostic reports an error, a
+    /// warning, an information or a hint to the user.
+    fn severity(&self) -> Severity {
+        Severity::Error
+    }
+
+    /// The description is a text-only explanation of the issue this diagnostic
+    /// is reporting, intended for display contexts that do not support rich
+    /// markup such as in-editor popovers
+    ///
+    /// The description should generally be as exhaustive as possible, since
+    /// the clients that do not support rendering markup will not render the
+    /// advices for the diagnostic either.
+    fn description(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let _ = fmt;
+        Ok(())
+    }
+
+    /// An explanation of the issue this diagnostic is reporting
+    ///
+    /// In general it's better to keep this message as short as possible, and
+    /// instead rely on advices to better convey contextual explanations to the
+    /// user.
+    fn message(&self, fmt: &mut fmt::Formatter<'_>) -> io::Result<()> {
+        let _ = fmt;
+        Ok(())
+    }
+
+    /// Advices are the main building blocks used compose rich errors. They are
+    /// implemented using a visitor pattern, where consumers of a diagnostic
+    /// can visit the object and collect the advices that make it up for the
+    /// purpose of display or introspection.
+    fn advices(&self, visitor: &mut dyn Visit) -> io::Result<()> {
+        let _ = visitor;
+        Ok(())
+    }
+
+    /// Diagnostics can defines additional advices to be printed if the user
+    /// requires more detail about the diagnostic.
+    fn verbose_advices(&self, visitor: &mut dyn Visit) -> io::Result<()> {
+        let _ = visitor;
+        Ok(())
+    }
+
+    /// A diagnostic can be tied to a specific "location": this can be a file,
+    /// memory buffer, command line argument, etc. It may also be tied to a
+    /// specific text range within the content of that location. Finally, it
+    /// may also provide the source string for that location (this is required
+    /// in order to display a code frame advice for the diagnostic).
+    fn location(&self) -> Location<'_> {
+        Location::builder().build()
+    }
+
+    /// Tags convey additional boolean metadata about the nature of a diagnostic:
+    /// - If the diagnostic can be automatically fixed
+    /// - If the diagnostic resulted from and internal error
+    /// - If the diagnostic is being emitted as part of a crash / fatal error
+    /// - If the diagnostic is a warning about a piece of unused or unnecessary code
+    /// - If the diagnostic is a warning about a piece of deprecated or obsolete code.
+    fn tags(&self) -> DiagnosticTags {
+        DiagnosticTags::empty()
+    }
+
+    /// Similarly to the `source` method of the [std::error::Error] trait, this
+    /// returns another diagnostic that's the logical "cause" for this issue.
+    /// For instance, a "request failed" diagnostic may have been cause by a
+    /// "deserialization error". This allows low-level error to be wrapped in
+    /// higher level concepts, while retaining enough information to display
+    /// and fix the underlying issue.
+    fn source(&self) -> Option<&dyn Diagnostic> {
+        None
+    }
 }
 
-impl Diagnostic {
-    /// Creates a new [`Diagnostic`] with the `Error` severity.
-    pub fn error(file_id: FileId, code: impl Into<String>, title: impl Into<String>) -> Self {
-        Self::new_with_code(file_id, Severity::Error, title, Some(code.into()))
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "camelCase")]
+/// The severity to associate to a diagnostic.
+pub enum Severity {
+    /// Reports a hint.
+    Hint,
+    /// Reports an information.
+    Information,
+    /// Reports a warning.
+    Warning,
+    /// Reports an error.
+    Error,
+    /// Reports a crash.
+    Fatal,
+}
+
+/// Internal enum used to automatically generate bit offsets for [DiagnosticTags]
+/// and help with the implementation of `serde` and `schemars` for tags.
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "camelCase")]
+pub(super) enum DiagnosticTag {
+    Fixable,
+    Internal,
+    UnnecessaryCode,
+    DeprecatedCode,
+}
+
+bitflags! {
+    #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct DiagnosticTags: u8 {
+        /// This diagnostic has a fix suggestion.
+        const FIXABLE = 1 << DiagnosticTag::Fixable as u8;
+        /// This diagnostic results from an internal error.
+        const INTERNAL = 1 << DiagnosticTag::Internal as u8;
+        /// This diagnostic tags unused or unnecessary code, this may change
+        /// how the diagnostic is render in editors.
+        const UNNECESSARY_CODE = 1 << DiagnosticTag::UnnecessaryCode as u8;
+        /// This diagnostic tags deprecated or obsolete code, this may change
+        /// how the diagnostic is render in editors.
+        const DEPRECATED_CODE = 1 << DiagnosticTag::DeprecatedCode as u8;
+    }
+}
+
+// Implement the `Diagnostic` on the `Infallible` error type from the standard
+// library as a utility for implementing signatures that require a diagnostic
+// type when the operation can never fail
+impl Diagnostic for Infallible {}
+
+pub(crate) mod internal {
+    //! The `AsDiagnostic` trait needs to be declared as public as its referred
+    //! to in the `where` clause of other public items, but as it's not part of
+    //! the public API it's declared in a private module so it's not accessible
+    //! outside of the crate
+
+    use std::fmt::Debug;
+
+    use crate::Diagnostic;
+
+    /// Since [Error](crate::Error) must implement `From<T: Diagnostic>` to
+    /// be used with the `?` operator, it cannot implement the [Diagnostic]
+    /// trait (as that would conflict with the implementation of `From<T> for T`
+    /// in the standard library). The [AsDiagnostic] exists as an internal
+    /// implementation detail to bridge this gap and allow various types and
+    /// functions in `rome_diagnostics` to be generic over all diagnostics +
+    /// `Error`.
+    pub trait AsDiagnostic: Debug {
+        type Diagnostic: Diagnostic + ?Sized;
+        fn as_diagnostic(&self) -> &Self::Diagnostic;
+        fn as_dyn(&self) -> &dyn Diagnostic;
     }
 
-    /// Creates a new [`Diagnostic`] with the `Warning` severity.
-    pub fn warning(file_id: FileId, code: impl Into<String>, title: impl Into<String>) -> Self {
-        Self::new_with_code(file_id, Severity::Warning, title, Some(code.into()))
-    }
+    impl<D: Diagnostic> AsDiagnostic for D {
+        type Diagnostic = D;
 
-    /// Creates a new [`Diagnostic`] with the `Help` severity.
-    pub fn help(file_id: FileId, code: impl Into<String>, title: impl Into<String>) -> Self {
-        Self::new_with_code(file_id, Severity::Help, title, Some(code.into()))
-    }
+        fn as_diagnostic(&self) -> &Self::Diagnostic {
+            self
+        }
 
-    /// Creates a new [`Diagnostic`] with the `Note` severity.
-    pub fn note(file_id: FileId, code: impl Into<String>, title: impl Into<String>) -> Self {
-        Self::new_with_code(file_id, Severity::Note, title, Some(code.into()))
-    }
-
-    /// Creates a new [`Diagnostic`] that will be used in a builder-like way
-    /// to modify labels, and suggestions.
-    pub fn new(file_id: FileId, severity: Severity, title: impl Into<String>) -> Self {
-        Self::new_with_code(file_id, severity, title, None)
-    }
-
-    /// Creates a new [`Diagnostic`] with an error code that will be used in a builder-like way
-    /// to modify labels, and suggestions.
-    pub fn new_with_code(
-        file_id: FileId,
-        severity: Severity,
-        title: impl Into<String>,
-        code: Option<String>,
-    ) -> Self {
-        Self {
-            file_id,
-            code,
-            severity,
-            title: title.into(),
-            primary: None,
-            tag: None,
-            children: vec![],
-            suggestions: vec![],
-            footers: vec![],
+        fn as_dyn(&self) -> &dyn Diagnostic {
+            self
         }
     }
-
-    /// Overwrites the severity of this diagnostic.
-    pub fn severity(mut self, severity: Severity) -> Self {
-        self.severity = severity;
-        self
-    }
-
-    /// Marks this diagnostic as deprecated code, which will
-    /// be displayed in the language server.
-    ///
-    /// This does not have any influence on the diagnostic rendering.
-    pub fn deprecated(mut self) -> Self {
-        self.tag = if matches!(self.tag, Some(DiagnosticTag::Unnecessary)) {
-            Some(DiagnosticTag::Both)
-        } else {
-            Some(DiagnosticTag::Deprecated)
-        };
-        self
-    }
-
-    /// Marks this diagnostic as unnecessary code, which will
-    /// be displayed in the language server.
-    ///
-    /// This does not have any influence on the diagnostic rendering.
-    pub fn unnecessary(mut self) -> Self {
-        self.tag = if matches!(self.tag, Some(DiagnosticTag::Deprecated)) {
-            Some(DiagnosticTag::Both)
-        } else {
-            Some(DiagnosticTag::Unnecessary)
-        };
-        self
-    }
-
-    /// Attaches a label to this [`Diagnostic`], that will point to another file
-    /// that is provided.
-    pub fn label_in_file(mut self, severity: Severity, span: FileSpan, msg: String) -> Self {
-        self.children.push(SubDiagnostic {
-            severity,
-            msg,
-            span,
-        });
-        self
-    }
-
-    /// Attaches a label to this [`Diagnostic`].
-    ///
-    /// The given span has to be in the file that was provided while creating this [`Diagnostic`].
-    pub fn label(mut self, severity: Severity, span: impl Span, msg: impl Into<String>) -> Self {
-        self.children.push(SubDiagnostic {
-            severity,
-            msg: msg.into(),
-            span: FileSpan::new(self.file_id, span),
-        });
-        self
-    }
-
-    /// Attaches a primary label to this [`Diagnostic`].
-    pub fn primary(mut self, span: impl Span, msg: impl Into<String>) -> Self {
-        self.primary = Some(SubDiagnostic {
-            severity: self.severity,
-            msg: msg.into(),
-            span: FileSpan::new(self.file_id, span),
-        });
-        self
-    }
-
-    /// Attaches a secondary label to this [`Diagnostic`].
-    pub fn secondary(self, span: impl Span, msg: impl Into<String>) -> Self {
-        self.label(Severity::Note, span, msg)
-    }
-
-    /// Prints out a message that suggests a possible solution, that is in another
-    /// file as this `Diagnostic`, to the error.
-    ///
-    /// If the message plus the suggestion is longer than 25 chars,
-    /// the suggestion is displayed as a new children of this `Diagnostic`,
-    /// otherwise it will be inlined with the other labels.
-    ///
-    /// A suggestion is displayed like:
-    /// ```no_rust
-    /// try adding a `;`: console.log();
-    /// ```
-    /// or in a separate multiline suggestion
-    ///
-    /// The message should not contain the `:` because it's added automatically.
-    /// The suggestion will automatically be wrapped inside two backticks.
-    pub fn suggestion_in_file(
-        self,
-        span: impl Span,
-        msg: &str,
-        suggestion: impl Into<String>,
-        applicability: Applicability,
-        file: FileId,
-    ) -> Self {
-        self.suggestion_inner(span, msg, suggestion, applicability, None, file)
-    }
-
-    fn auto_suggestion_style(span: &impl Span, msg: &str) -> SuggestionStyle {
-        if span.as_range().len() + TextSize::of(msg) > TextSize::from(25u32) {
-            SuggestionStyle::Full
-        } else {
-            SuggestionStyle::Inline
-        }
-    }
-
-    /// Prints out a message that suggests a possible solution to the error.
-    ///
-    /// If the message plus the suggestion is longer than 25 chars,
-    /// the suggestion is displayed as a new children of this `Diagnostic`,
-    /// otherwise it will be inlined with the other labels.
-    ///
-    /// A suggestion is displayed like:
-    /// ```no_rust
-    /// try adding a `;`: console.log();
-    /// ```
-    /// or in a separate multiline suggestion
-    ///
-    /// The message should not contain the `:` because it's added automatically.
-    /// The suggestion will automatically be wrapped inside two backticks.
-    pub fn suggestion(
-        self,
-        span: impl Span,
-        msg: &str,
-        suggestion: impl Into<String>,
-        applicability: Applicability,
-    ) -> Self {
-        let file = self.file_id;
-        self.suggestion_inner(span, msg, suggestion, applicability, None, file)
-    }
-
-    /// Add a suggestion which is always shown in the [Full](SuggestionStyle::Full) style.
-    pub fn suggestion_full(
-        self,
-        span: impl Span,
-        msg: &str,
-        suggestion: impl Into<String>,
-        applicability: Applicability,
-    ) -> Self {
-        let file = self.file_id;
-        self.suggestion_inner(
-            span,
-            msg,
-            suggestion,
-            applicability,
-            SuggestionStyle::Full,
-            file,
-        )
-    }
-
-    /// Add a suggestion which is always shown in the [Inline](SuggestionStyle::Inline) style.
-    pub fn suggestion_inline(
-        self,
-        span: impl Span,
-        msg: &str,
-        suggestion: impl Into<String>,
-        applicability: Applicability,
-    ) -> Self {
-        let file = self.file_id;
-        self.suggestion_inner(
-            span,
-            msg,
-            suggestion,
-            applicability,
-            SuggestionStyle::Inline,
-            file,
-        )
-    }
-
-    /// Add a suggestion which does not have a suggestion code.
-    pub fn suggestion_no_code(
-        self,
-        span: impl Span,
-        msg: &str,
-        applicability: Applicability,
-    ) -> Self {
-        let file = self.file_id;
-        self.suggestion_inner(
-            span,
-            msg,
-            "",
-            applicability,
-            SuggestionStyle::HideCode,
-            file,
-        )
-    }
-
-    pub fn indel_suggestion(
-        mut self,
-        indels: impl IntoIterator<Item = Indel>,
-        span: impl Span,
-        msg: &str,
-        applicability: Applicability,
-    ) -> Self {
-        let span = FileSpan {
-            file: self.file_id,
-            range: span.as_range(),
-        };
-        let indels = indels.into_iter().collect::<Vec<_>>();
-        let labels = indels
-            .iter()
-            .filter(|x| !x.insert.is_empty())
-            .map(|x| {
-                TextRange::new(
-                    x.delete.as_range().start(),
-                    x.delete.as_range().start() + TextSize::of(&x.insert),
-                )
-            })
-            .collect();
-
-        let suggestion = CodeSuggestion {
-            substitution: SuggestionChange::Indels(indels),
-            applicability,
-            msg: msg.to_string(),
-            labels,
-            span,
-            style: SuggestionStyle::Full,
-        };
-        self.suggestions.push(suggestion);
-        self
-    }
-
-    /// Add a suggestion with info labels which point to places in the suggestion.
-    ///
-    /// **The label ranges are relative to the start of the span, not relative to the original code**
-    pub fn suggestion_with_labels(
-        mut self,
-        span: impl Span,
-        msg: &str,
-        suggestion: impl Into<String>,
-        applicability: Applicability,
-        labels: impl IntoIterator<Item = impl Span>,
-    ) -> Self {
-        let span = FileSpan {
-            file: self.file_id,
-            range: span.as_range(),
-        };
-
-        let labels = labels
-            .into_iter()
-            .map(|x| {
-                let range = x.as_range();
-                TextRange::new(
-                    span.range.start() + range.start(),
-                    span.range.start() + range.end(),
-                )
-            })
-            .collect::<Vec<_>>();
-        let suggestion = CodeSuggestion {
-            substitution: SuggestionChange::String(suggestion.into()),
-            applicability,
-            msg: msg.to_string(),
-            labels,
-            span,
-            style: SuggestionStyle::Full,
-        };
-        self.suggestions.push(suggestion);
-        self
-    }
-
-    /// Add a suggestion with info labels which point to places in the suggestion.
-    ///
-    /// **The label ranges are relative to the source code, not relative to the original code**
-    pub fn suggestion_with_src_labels(
-        mut self,
-        span: impl Span,
-        msg: &str,
-        suggestion: impl Into<String>,
-        applicability: Applicability,
-        labels: impl IntoIterator<Item = impl Span>,
-    ) -> Self {
-        let span = FileSpan {
-            file: self.file_id,
-            range: span.as_range(),
-        };
-
-        let labels = labels.into_iter().map(|x| x.as_range()).collect::<Vec<_>>();
-        let suggestion = CodeSuggestion {
-            substitution: SuggestionChange::String(suggestion.into()),
-            applicability,
-            msg: msg.to_string(),
-            labels,
-            span,
-            style: SuggestionStyle::Full,
-        };
-        self.suggestions.push(suggestion);
-        self
-    }
-
-    fn suggestion_inner(
-        mut self,
-        span: impl Span,
-        msg: &str,
-        suggestion: impl Into<String>,
-        applicability: Applicability,
-        style: impl Into<Option<SuggestionStyle>>,
-        file: FileId,
-    ) -> Self {
-        let style = style
-            .into()
-            .unwrap_or_else(|| Self::auto_suggestion_style(&span, msg));
-        let span = FileSpan {
-            file,
-            range: span.as_range(),
-        };
-        let suggestion = CodeSuggestion {
-            substitution: SuggestionChange::String(suggestion.into()),
-            applicability,
-            msg: msg.to_string(),
-            labels: vec![],
-            span,
-            style,
-        };
-        self.suggestions.push(suggestion);
-        self
-    }
-
-    /// Adds a footer to this `Diagnostic`, which will be displayed under the actual error.
-    pub fn footer(mut self, severity: Severity, msg: impl Into<String>) -> Self {
-        self.footers.push(Footer {
-            msg: msg.into(),
-            severity,
-        });
-        self
-    }
-
-    /// Adds a footer to this `Diagnostic`, with the `Help` severity.
-    pub fn footer_help(self, msg: impl Into<String>) -> Self {
-        self.footer(Severity::Help, msg)
-    }
-
-    /// Adds a footer to this `Diagnostic`, with the `Note` severity.
-    pub fn footer_note(self, msg: impl Into<String>) -> Self {
-        self.footer(Severity::Note, msg)
-    }
-
-    /// Checks if the severity of the current diagnostic is [Severity::Error] or higher
-    pub fn is_error(&self) -> bool {
-        self.severity >= Severity::Error
-    }
-}
-
-/// Everything that can be added to a diagnostic, like
-/// a suggestion that will be displayed under the actual error.
-#[derive(Debug, Clone, PartialEq, Hash)]
-pub struct SubDiagnostic {
-    pub severity: Severity,
-    pub msg: String,
-    pub span: FileSpan,
-}
-
-/// A note or help that is displayed under the diagnostic.
-#[derive(Debug, Clone, PartialEq, Hash)]
-pub struct Footer {
-    pub msg: String,
-    pub severity: Severity,
 }

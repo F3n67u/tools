@@ -2,16 +2,21 @@ use pico_args::Arguments;
 use xtask::{project_root, pushd, Result};
 use xtask_bench::{run, FeatureToBenchmark, RunArgs};
 
-#[cfg(feature = "dhat-on")]
-use dhat::DhatAlloc;
-
-#[cfg(feature = "dhat-on")]
+#[cfg(feature = "dhat-heap")]
 #[global_allocator]
-static ALLOCATOR: DhatAlloc = DhatAlloc;
+static ALLOCATOR: dhat::Alloc = dhat::Alloc;
+
+#[cfg(all(target_os = "windows", not(feature = "dhat-heap")))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+#[cfg(all(not(target_os = "windows"), not(feature = "dhat-heap")))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 fn main() -> Result<(), pico_args::Error> {
-    #[cfg(feature = "dhat-on")]
-    let dhat = dhat::Dhat::start_heap_profiling();
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
 
     let _d = pushd(project_root());
     let mut args = Arguments::from_env();
@@ -27,7 +32,7 @@ OPTIONS
     --save-baseline     Allows different runs to be compared.
     --feature           Possible values: parser, formatter
     --criterion=[true/false]  Run a series of statistical test to assess with the this run is faster or slower than previous runs.
-    --suites=<IDS>      Runs the specified benchmarks. Use comma as separator. 
+    --suites=<IDS>      Runs the specified benchmarks. Use comma as separator.
                         Valid values are:
                             *: will run all benchmarks;
                             js: will benchmark all javascript libraries;

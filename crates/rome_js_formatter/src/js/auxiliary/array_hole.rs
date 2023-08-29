@@ -1,9 +1,12 @@
-use crate::{empty_element, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
 
 use rome_js_syntax::JsArrayHole;
 
-impl ToFormatElement for JsArrayHole {
-    fn to_format_element(&self, _: &Formatter) -> FormatResult<FormatElement> {
-        Ok(empty_element())
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsArrayHole;
+
+impl FormatNodeRule<JsArrayHole> for FormatJsArrayHole {
+    fn fmt_fields(&self, _: &JsArrayHole, _: &mut JsFormatter) -> FormatResult<()> {
+        Ok(())
     }
 }

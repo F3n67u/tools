@@ -1,6 +1,8 @@
+#[cfg(feature = "dhat-heap")]
+use crate::features::print_stats;
+use crate::language::FormatNode;
 use crate::BenchmarkSummary;
-use rome_js_formatter::{format, FormatOptions, Formatted};
-use rome_js_syntax::JsSyntaxNode;
+use rome_formatter::Printed;
 use std::fmt::{Display, Formatter};
 use std::time::Duration;
 
@@ -9,9 +11,9 @@ pub struct FormatterMeasurement {
     id: String,
     formatting: Duration,
 }
-pub fn benchmark_format_lib(id: &str, root: &JsSyntaxNode) -> BenchmarkSummary {
+pub fn benchmark_format_lib(id: &str, format_node: &FormatNode) -> BenchmarkSummary {
     let formatter_timer = timing::start();
-    run_format(root);
+    criterion::black_box(run_format(format_node));
     let formatter_duration = formatter_timer.stop();
 
     BenchmarkSummary::Formatter(FormatterMeasurement {
@@ -20,8 +22,31 @@ pub fn benchmark_format_lib(id: &str, root: &JsSyntaxNode) -> BenchmarkSummary {
     })
 }
 
-pub fn run_format(root: &JsSyntaxNode) -> Formatted {
-    format(FormatOptions::default(), root).unwrap()
+pub fn run_format(format_node: &FormatNode) -> Printed {
+    #[cfg(feature = "dhat-heap")]
+    let stats = {
+        println!("Start");
+        print_stats(dhat::HeapStats::get(), None)
+    };
+
+    let formatted = format_node.format_node().unwrap();
+
+    #[cfg(feature = "dhat-heap")]
+    let stats = {
+        println!("Formatted");
+        print_stats(dhat::HeapStats::get(), Some(stats))
+    };
+
+    let printed = formatted.print();
+    drop(formatted);
+
+    #[cfg(feature = "dhat-heap")]
+    {
+        println!("Printed");
+        print_stats(dhat::HeapStats::get(), Some(stats));
+    }
+
+    printed.expect("Document to be valid")
 }
 
 impl FormatterMeasurement {

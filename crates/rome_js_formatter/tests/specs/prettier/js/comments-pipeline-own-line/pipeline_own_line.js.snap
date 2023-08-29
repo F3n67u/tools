@@ -1,10 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 125
-expression: pipeline_own_line.js
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/comments-pipeline-own-line/pipeline_own_line.js
 ---
+
 # Input
+
 ```js
 function pipeline() {
 	0
@@ -47,7 +48,74 @@ bifornCringerMoshedPerplexSawder[
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,38 +1,38 @@
+ function pipeline() {
+-  0 |>
+-    // Comment
+-    x;
++  0
++	// Comment
++	|> x
+ }
+ 
+ bifornCringerMoshedPerplexSawder(
+   askTrovenaBeenaDependsRowans,
+   glimseGlyphsHazardNoopsTieTie,
+-  averredBathersBoxroomBuggyNurl,
++  averredBathersBoxroomBuggyNurl
+ ) // comment
+-  |> kochabCooieGameOnOboleUnweave
+-  |> glimseGlyphsHazardNoopsTieTie;
++|> kochabCooieGameOnOboleUnweave
++|> glimseGlyphsHazardNoopsTieTie;
+ 
+ bifornCringerMoshedPerplexSawder(
+   askTrovenaBeenaDependsRowans,
+-  glimseGlyphsHazardNoopsTieTie,
++  glimseGlyphsHazardNoopsTieTie
+ )
+-  |> foo // comment
+-  |> kochabCooieGameOnOboleUnweave
+-  |> glimseGlyphsHazardNoopsTieTie;
++|> foo // comment
++|> kochabCooieGameOnOboleUnweave
++|> glimseGlyphsHazardNoopsTieTie;
+ 
+ bifornCringerMoshedPerplexSawder[
+   askTrovenaBeenaDependsRowans +
+-    glimseGlyphsHazardNoopsTieTie +
+-    averredBathersBoxroomBuggyNurl
++  glimseGlyphsHazardNoopsTieTie +
++  averredBathersBoxroomBuggyNurl
+ ] // comment
+-  |> kochabCooieGameOnOboleUnweave
+-  |> glimseGlyphsHazardNoopsTieTie;
++|> kochabCooieGameOnOboleUnweave
++|> glimseGlyphsHazardNoopsTieTie;
+ 
+ bifornCringerMoshedPerplexSawder[
+   askTrovenaBeenaDependsRowans +
+-    glimseGlyphsHazardNoopsTieTie +
+-    averredBathersBoxroomBuggyNurl
++  glimseGlyphsHazardNoopsTieTie +
++  averredBathersBoxroomBuggyNurl
+ ]
+-  |> foo // comment
+-  |> kochabCooieGameOnOboleUnweave
+-  |> glimseGlyphsHazardNoopsTieTie;
++|> foo // comment
++|> kochabCooieGameOnOboleUnweave
++|> glimseGlyphsHazardNoopsTieTie;
+```
+
 # Output
+
 ```js
 function pipeline() {
   0
@@ -87,77 +155,152 @@ bifornCringerMoshedPerplexSawder[
 |> foo // comment
 |> kochabCooieGameOnOboleUnweave
 |> glimseGlyphsHazardNoopsTieTie;
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-  ┌─ pipeline_own_line.js:4:3
-  │
-4 │     |> x
-  │      ^ This operator requires a left hand side value
+pipeline_own_line.js:4:3 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:12:2
-   │
-12 │ |> kochabCooieGameOnOboleUnweave
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    2 │ 	0
+    3 │ 	// Comment
+  > 4 │ 	|> x
+      │ 	 ^
+    5 │ }
+    6 │ 
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:12:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:13:2
-   │
-13 │ |> glimseGlyphsHazardNoopsTieTie;
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    10 │   averredBathersBoxroomBuggyNurl
+    11 │ ) // comment
+  > 12 │ |> kochabCooieGameOnOboleUnweave
+       │  ^
+    13 │ |> glimseGlyphsHazardNoopsTieTie;
+    14 │ 
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:13:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:19:2
-   │
-19 │ |> foo // comment
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    11 │ ) // comment
+    12 │ |> kochabCooieGameOnOboleUnweave
+  > 13 │ |> glimseGlyphsHazardNoopsTieTie;
+       │  ^
+    14 │ 
+    15 │ bifornCringerMoshedPerplexSawder(
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:19:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:20:2
-   │
-20 │ |> kochabCooieGameOnOboleUnweave
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    17 │   glimseGlyphsHazardNoopsTieTie
+    18 │ )
+  > 19 │ |> foo // comment
+       │  ^
+    20 │ |> kochabCooieGameOnOboleUnweave
+    21 │ |> glimseGlyphsHazardNoopsTieTie;
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:20:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:21:2
-   │
-21 │ |> glimseGlyphsHazardNoopsTieTie;
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    18 │ )
+    19 │ |> foo // comment
+  > 20 │ |> kochabCooieGameOnOboleUnweave
+       │  ^
+    21 │ |> glimseGlyphsHazardNoopsTieTie;
+    22 │ 
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:21:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:28:2
-   │
-28 │ |> kochabCooieGameOnOboleUnweave
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    19 │ |> foo // comment
+    20 │ |> kochabCooieGameOnOboleUnweave
+  > 21 │ |> glimseGlyphsHazardNoopsTieTie;
+       │  ^
+    22 │ 
+    23 │ bifornCringerMoshedPerplexSawder[
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:28:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:29:2
-   │
-29 │ |> glimseGlyphsHazardNoopsTieTie;
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    26 │   averredBathersBoxroomBuggyNurl
+    27 │ ] // comment
+  > 28 │ |> kochabCooieGameOnOboleUnweave
+       │  ^
+    29 │ |> glimseGlyphsHazardNoopsTieTie;
+    30 │ 
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:29:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:36:2
-   │
-36 │ |> foo // comment
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    27 │ ] // comment
+    28 │ |> kochabCooieGameOnOboleUnweave
+  > 29 │ |> glimseGlyphsHazardNoopsTieTie;
+       │  ^
+    30 │ 
+    31 │ bifornCringerMoshedPerplexSawder[
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:36:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:37:2
-   │
-37 │ |> kochabCooieGameOnOboleUnweave
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    34 │   averredBathersBoxroomBuggyNurl
+    35 │ ]
+  > 36 │ |> foo // comment
+       │  ^
+    37 │ |> kochabCooieGameOnOboleUnweave
+    38 │ |> glimseGlyphsHazardNoopsTieTie;
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:37:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ pipeline_own_line.js:38:2
-   │
-38 │ |> glimseGlyphsHazardNoopsTieTie;
-   │  ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    35 │ ]
+    36 │ |> foo // comment
+  > 37 │ |> kochabCooieGameOnOboleUnweave
+       │  ^
+    38 │ |> glimseGlyphsHazardNoopsTieTie;
+    39 │ 
+  
+  i This operator requires a left hand side value
+  
+pipeline_own_line.js:38:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    36 │ |> foo // comment
+    37 │ |> kochabCooieGameOnOboleUnweave
+  > 38 │ |> glimseGlyphsHazardNoopsTieTie;
+       │  ^
+    39 │ 
+  
+  i This operator requires a left hand side value
+  
 
 ```
 

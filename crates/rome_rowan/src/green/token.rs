@@ -22,6 +22,10 @@ struct GreenTokenHead {
     _c: Count<GreenToken>,
 }
 
+pub(crate) fn has_live() -> bool {
+    countme::get::<GreenToken>().live > 0
+}
+
 type Repr = HeaderSlice<GreenTokenHead, [u8]>;
 type ReprThin = HeaderSlice<GreenTokenHead, [u8; 0]>;
 #[repr(transparent)]
@@ -58,7 +62,7 @@ impl ToOwned for GreenTokenData {
 impl Borrow<GreenTokenData> for GreenToken {
     #[inline]
     fn borrow(&self) -> &GreenTokenData {
-        &*self
+        self
     }
 }
 
@@ -75,14 +79,14 @@ impl fmt::Debug for GreenTokenData {
 
 impl fmt::Debug for GreenToken {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let data: &GreenTokenData = &*self;
+        let data: &GreenTokenData = self;
         fmt::Debug::fmt(data, f)
     }
 }
 
 impl fmt::Display for GreenToken {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let data: &GreenTokenData = &*self;
+        let data: &GreenTokenData = self;
         fmt::Display::fmt(data, f)
     }
 }
@@ -169,10 +173,8 @@ impl GreenToken {
     }
 
     #[inline]
-    pub(crate) fn into_raw(this: GreenToken) -> ptr::NonNull<GreenTokenData> {
-        let green = ManuallyDrop::new(this);
-        let green: &GreenTokenData = &*green;
-        ptr::NonNull::from(&*green)
+    pub(crate) fn into_raw(self) -> ptr::NonNull<GreenTokenData> {
+        Arc::from_thin(self.ptr).into_raw().cast()
     }
 
     #[inline]

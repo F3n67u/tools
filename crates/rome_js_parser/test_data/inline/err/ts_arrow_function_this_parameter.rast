@@ -4,6 +4,7 @@ JsModule {
     items: JsModuleItemList [
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@0..4 "let" [] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -19,7 +20,7 @@ JsModule {
                                 parameters: JsParameters {
                                     l_paren_token: L_PAREN@8..9 "(" [] [],
                                     items: JsParameterList [
-                                        JsUnknownParameter {
+                                        JsBogusParameter {
                                             items: [
                                                 THIS_KW@9..13 "this" [] [],
                                                 TsTypeAnnotation {
@@ -58,8 +59,9 @@ JsModule {
   2: JS_MODULE_ITEM_LIST@0..28
     0: JS_VARIABLE_STATEMENT@0..28
       0: JS_VARIABLE_DECLARATION@0..28
-        0: LET_KW@0..4 "let" [] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@4..28
+        0: (empty)
+        1: LET_KW@0..4 "let" [] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@4..28
           0: JS_VARIABLE_DECLARATOR@4..28
             0: JS_IDENTIFIER_BINDING@4..6
               0: IDENT@4..6 "a" [] [Whitespace(" ")]
@@ -72,7 +74,7 @@ JsModule {
                 2: JS_PARAMETERS@8..23
                   0: L_PAREN@8..9 "(" [] []
                   1: JS_PARAMETER_LIST@9..21
-                    0: JS_UNKNOWN_PARAMETER@9..21
+                    0: JS_BOGUS_PARAMETER@9..21
                       0: THIS_KW@9..13 "this" [] []
                       1: TS_TYPE_ANNOTATION@13..21
                         0: COLON@13..15 ":" [] [Whitespace(" ")]
@@ -89,11 +91,13 @@ JsModule {
       1: (empty)
   3: EOF@28..29 "" [Newline("\n")] []
 --
-error[SyntaxError]: An arrow function cannot have a 'this' parameter.
-  ┌─ ts_arrow_function_this_parameter.ts:1:10
-  │
-1 │ let a = (this: string) => {}
-  │          ^^^^^^^^^^^^
+ts_arrow_function_this_parameter.ts:1:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × An arrow function cannot have a 'this' parameter.
+  
+  > 1 │ let a = (this: string) => {}
+      │          ^^^^^^^^^^^^
+    2 │ 
+  
 --
 let a = (this: string) => {}

@@ -1,11 +1,12 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 123
-expression: optional-chain.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/non-null/optional-chain.ts
 ---
+
 # Input
-```js
+
+```ts
 a?.b!.c;
 a?.b!.c.d;
 a?.b.c!.d;
@@ -27,27 +28,56 @@ a?.().b!.c?.c;
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -4,15 +4,15 @@
+ a!.b?.c;
+ a?.b!?.c;
+ a?.b!.c?.c;
+-(a?.b)!.c;
+-(a?.b)!.c;
++a?.b!.c;
++a?.b!.c;
+ 
+ a?.().b!.c;
+ a?.().b!.c.d;
+ a?.().b.c!.d;
+ a?.().b!?.c;
+ a?.().b!.c?.c;
+-(a?.().b)!.c;
+-(a?.().b)!.c;
++a?.().b!.c;
++a?.().b!.c;
+ 
+-(a?.b)![c?.d!];
++a?.b![c?.d!];
+```
+
 # Output
-```js
+
+```ts
 a?.b!.c;
 a?.b!.c.d;
 a?.b.c!.d;
 a!.b?.c;
 a?.b!?.c;
 a?.b!.c?.c;
-(a?.b!).c;
-(a?.b)!.c;
+a?.b!.c;
+a?.b!.c;
 
 a?.().b!.c;
 a?.().b!.c.d;
 a?.().b.c!.d;
 a?.().b!?.c;
 a?.().b!.c?.c;
-(a?.().b!).c;
-(a?.().b)!.c;
+a?.().b!.c;
+a?.().b!.c;
 
-(a?.b)![c?.d!];
-
+a?.b![c?.d!];
 ```
 
 

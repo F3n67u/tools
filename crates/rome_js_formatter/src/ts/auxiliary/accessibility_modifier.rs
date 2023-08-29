@@ -1,11 +1,16 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::TsAccessibilityModifier;
 use rome_js_syntax::TsAccessibilityModifierFields;
 
-impl ToFormatElement for TsAccessibilityModifier {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let TsAccessibilityModifierFields { modifier_token } = self.as_fields();
-        modifier_token.format(formatter)
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsAccessibilityModifier;
+
+impl FormatNodeRule<TsAccessibilityModifier> for FormatTsAccessibilityModifier {
+    fn fmt_fields(&self, node: &TsAccessibilityModifier, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsAccessibilityModifierFields { modifier_token } = node.as_fields();
+
+        write![f, [modifier_token.format()]]
     }
 }

@@ -14,7 +14,7 @@ pub fn generate_macros(ast: &AstSrc, language_kind: LanguageKind) -> Result<Stri
             let node_kind = format_ident!("{}", to_upper_snake_case(&node.name));
             (name, node_kind)
         })
-        .chain(ast.unknowns.iter().map(|node_name| {
+        .chain(ast.bogus.iter().map(|node_name| {
             let name = format_ident!("{}", node_name);
             let node_kind = format_ident!("{}", to_upper_snake_case(node_name));
             (name, node_kind)
@@ -38,8 +38,8 @@ pub fn generate_macros(ast: &AstSrc, language_kind: LanguageKind) -> Result<Stri
     let ast = quote! {
         /// Reconstruct an AstNode from a SyntaxNode
         ///
-        /// This macros performs a match over the [kind](SyntaxNode::kind)
-        /// of the provided [SyntaxNode] and constructs the appropriate
+        /// This macros performs a match over the [kind](rome_rowan::SyntaxNode::kind)
+        /// of the provided [rome_rowan::SyntaxNode] and constructs the appropriate
         /// AstNode type for it, then execute the provided expression over it.
         ///
         /// # Examples

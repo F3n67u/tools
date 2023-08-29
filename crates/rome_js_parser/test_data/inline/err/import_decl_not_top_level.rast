@@ -5,7 +5,7 @@ JsModule {
         JsBlockStatement {
             l_curly_token: L_CURLY@0..1 "{" [] [],
             statements: JsStatementList [
-                JsUnknownStatement {
+                JsBogusStatement {
                     items: [
                         IMPORT_KW@1..10 "import" [Newline("\n"), Whitespace(" ")] [Whitespace(" ")],
                         JsImportDefaultClause {
@@ -36,7 +36,7 @@ JsModule {
     0: JS_BLOCK_STATEMENT@0..27
       0: L_CURLY@0..1 "{" [] []
       1: JS_STATEMENT_LIST@1..25
-        0: JS_UNKNOWN_STATEMENT@1..25
+        0: JS_BOGUS_STATEMENT@1..25
           0: IMPORT_KW@1..10 "import" [Newline("\n"), Whitespace(" ")] [Whitespace(" ")]
           1: JS_IMPORT_DEFAULT_CLAUSE@10..24
             0: (empty)
@@ -50,12 +50,18 @@ JsModule {
       2: R_CURLY@25..27 "}" [Newline("\n")] []
   3: EOF@27..28 "" [Newline("\n")] []
 --
-error[SyntaxError]: Illegal use of an import declaration not at the top level
-  ┌─ import_decl_not_top_level.js:2:2
-  │
-2 │  import foo from "bar";
-  │  ^^^^^^^^^^^^^^^^^^^^^^ move this declaration to the top level
+import_decl_not_top_level.js:2:2 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Illegal use of an import declaration not at the top level
+  
+    1 │ {
+  > 2 │  import foo from "bar";
+      │  ^^^^^^^^^^^^^^^^^^^^^^
+    3 │ }
+    4 │ 
+  
+  i move this declaration to the top level
+  
 --
 {
  import foo from "bar";

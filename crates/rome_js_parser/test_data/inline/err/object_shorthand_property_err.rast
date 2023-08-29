@@ -4,6 +4,7 @@ JsModule {
     items: JsModuleItemList [
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@0..4 "let" [] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -42,6 +43,7 @@ JsModule {
         },
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@15..20 "let" [Newline("\n")] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -76,6 +78,7 @@ JsModule {
         },
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@36..41 "let" [Newline("\n")] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -117,8 +120,9 @@ JsModule {
   2: JS_MODULE_ITEM_LIST@0..52
     0: JS_VARIABLE_STATEMENT@0..15
       0: JS_VARIABLE_DECLARATION@0..15
-        0: LET_KW@0..4 "let" [] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@4..15
+        0: (empty)
+        1: LET_KW@0..4 "let" [] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@4..15
           0: JS_VARIABLE_DECLARATOR@4..15
             0: JS_OBJECT_BINDING_PATTERN@4..12
               0: L_CURLY@4..6 "{" [] [Whitespace(" ")]
@@ -142,8 +146,9 @@ JsModule {
       1: (empty)
     1: JS_VARIABLE_STATEMENT@15..36
       0: JS_VARIABLE_DECLARATION@15..36
-        0: LET_KW@15..20 "let" [Newline("\n")] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@20..36
+        0: (empty)
+        1: LET_KW@15..20 "let" [Newline("\n")] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@20..36
           0: JS_VARIABLE_DECLARATOR@20..36
             0: JS_OBJECT_BINDING_PATTERN@20..33
               0: L_CURLY@20..22 "{" [] [Whitespace(" ")]
@@ -164,8 +169,9 @@ JsModule {
       1: (empty)
     2: JS_VARIABLE_STATEMENT@36..52
       0: JS_VARIABLE_DECLARATION@36..52
-        0: LET_KW@36..41 "let" [Newline("\n")] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@41..52
+        0: (empty)
+        1: LET_KW@36..41 "let" [Newline("\n")] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@41..52
           0: JS_VARIABLE_DECLARATOR@41..52
             0: JS_OBJECT_BINDING_PATTERN@41..49
               0: L_CURLY@41..43 "{" [] [Whitespace(" ")]
@@ -186,26 +192,55 @@ JsModule {
       1: (empty)
   3: EOF@52..53 "" [Newline("\n")] []
 --
-error[SyntaxError]: expected `,` but instead found `b`
-  ┌─ object_shorthand_property_err.js:1:9
-  │
-1 │ let { a b } = c
-  │         ^ unexpected
+object_shorthand_property_err.js:1:9 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `,` but instead found `b`
+  
+  > 1 │ let { a b } = c
+      │         ^
+    2 │ let { = "test" } = c
+    3 │ let { , d } = c
+  
+  i Remove b
+  
 --
-error[SyntaxError]: expected an identifier but instead found '='
-  ┌─ object_shorthand_property_err.js:2:7
-  │
-2 │ let { = "test" } = c
-  │       ^ Expected an identifier here
+object_shorthand_property_err.js:2:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an identifier but instead found '='
+  
+    1 │ let { a b } = c
+  > 2 │ let { = "test" } = c
+      │       ^
+    3 │ let { , d } = c
+    4 │ 
+  
+  i Expected an identifier here
+  
+    1 │ let { a b } = c
+  > 2 │ let { = "test" } = c
+      │       ^
+    3 │ let { , d } = c
+    4 │ 
+  
 --
-error[SyntaxError]: expected an identifier, a member name, or a rest pattern but instead found ','
-  ┌─ object_shorthand_property_err.js:3:7
-  │
-3 │ let { , d } = c
-  │       ^ Expected an identifier, a member name, or a rest pattern here
+object_shorthand_property_err.js:3:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an identifier, a member name, or a rest pattern but instead found ','
+  
+    1 │ let { a b } = c
+    2 │ let { = "test" } = c
+  > 3 │ let { , d } = c
+      │       ^
+    4 │ 
+  
+  i Expected an identifier, a member name, or a rest pattern here
+  
+    1 │ let { a b } = c
+    2 │ let { = "test" } = c
+  > 3 │ let { , d } = c
+      │       ^
+    4 │ 
+  
 --
 let { a b } = c
 let { = "test" } = c

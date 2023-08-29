@@ -1,14 +1,19 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::{JsxAttributeInitializerClause, JsxAttributeInitializerClauseFields};
 
-impl ToFormatElement for JsxAttributeInitializerClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsxAttributeInitializerClauseFields { eq_token, value } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub struct FormatJsxAttributeInitializerClause;
 
-        Ok(format_elements![
-            eq_token.format(formatter)?,
-            value.format(formatter)?
-        ])
+impl FormatNodeRule<JsxAttributeInitializerClause> for FormatJsxAttributeInitializerClause {
+    fn fmt_fields(
+        &self,
+        node: &JsxAttributeInitializerClause,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        let JsxAttributeInitializerClauseFields { eq_token, value } = node.as_fields();
+
+        write![f, [eq_token.format(), value.format()]]
     }
 }

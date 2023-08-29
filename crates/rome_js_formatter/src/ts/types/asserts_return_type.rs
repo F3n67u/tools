@@ -1,23 +1,40 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::TsAssertsReturnType;
-use rome_js_syntax::TsAssertsReturnTypeFields;
+use crate::prelude::*;
 
-impl ToFormatElement for TsAssertsReturnType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::TsAssertsReturnTypeFields;
+use rome_js_syntax::{JsSyntaxNode, TsAssertsReturnType};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsAssertsReturnType;
+
+impl FormatNodeRule<TsAssertsReturnType> for FormatTsAssertsReturnType {
+    fn fmt_fields(&self, node: &TsAssertsReturnType, f: &mut JsFormatter) -> FormatResult<()> {
         let TsAssertsReturnTypeFields {
             parameter_name,
             asserts_token,
             predicate,
-        } = self.as_fields();
-        Ok(format_elements![
-            asserts_token.format(formatter)?,
-            space_token(),
-            parameter_name.format(formatter)?,
-            space_token(),
-            predicate.format_or_empty(formatter)?
-        ])
+        } = node.as_fields();
+        write![
+            f,
+            [
+                asserts_token.format(),
+                space(),
+                parameter_name.format(),
+                space(),
+                predicate.format()
+            ]
+        ]
+    }
+
+    fn needs_parentheses(&self, item: &TsAssertsReturnType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsAssertsReturnType {
+    #[inline]
+    fn needs_parentheses_with_parent(&self, _: &JsSyntaxNode) -> bool {
+        false
     }
 }

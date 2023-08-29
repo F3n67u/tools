@@ -1,13 +1,16 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::utils::format_string_literal_token;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::TsImportType;
-use rome_js_syntax::TsImportTypeFields;
+use crate::prelude::*;
+use crate::utils::{FormatLiteralStringToken, StringLiteralParentKind};
 
-impl ToFormatElement for TsImportType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::TsImportTypeFields;
+use rome_js_syntax::{JsSyntaxNode, TsImportType};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsImportType;
+
+impl FormatNodeRule<TsImportType> for FormatTsImportType {
+    fn fmt_fields(&self, node: &TsImportType, f: &mut JsFormatter) -> FormatResult<()> {
         let TsImportTypeFields {
             typeof_token,
             import_token,
@@ -16,17 +19,35 @@ impl ToFormatElement for TsImportType {
             r_paren_token,
             qualifier_clause,
             type_arguments,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            typeof_token
-                .format_with_or_empty(formatter, |token| format_elements![token, space_token()])?,
-            import_token.format(formatter)?,
-            l_paren_token.format(formatter)?,
-            format_string_literal_token(argument_token?, formatter),
-            r_paren_token.format(formatter)?,
-            qualifier_clause.format_or_empty(formatter)?,
-            type_arguments.format_or_empty(formatter)?,
-        ])
+        if let Some(typeof_token) = typeof_token {
+            write!(f, [typeof_token.format(), space()])?;
+        }
+
+        write![
+            f,
+            [
+                import_token.format(),
+                l_paren_token.format(),
+                FormatLiteralStringToken::new(
+                    &argument_token?,
+                    StringLiteralParentKind::Expression
+                ),
+                r_paren_token.format(),
+                qualifier_clause.format(),
+                type_arguments.format(),
+            ]
+        ]
+    }
+
+    fn needs_parentheses(&self, item: &TsImportType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsImportType {
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

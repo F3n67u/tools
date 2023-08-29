@@ -1,15 +1,18 @@
-use crate::formatter::TrailingSeparator;
-use crate::{
-    join_elements, soft_line_break_or_space, token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::prelude::*;
 use rome_js_syntax::TsTypeArgumentList;
 
-impl ToFormatElement for TsTypeArgumentList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(join_elements(
-            soft_line_break_or_space(),
-            formatter.format_separated(self, || token(","), TrailingSeparator::Disallowed)?,
-        ))
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsTypeArgumentList;
+
+impl FormatRule<TsTypeArgumentList> for FormatTsTypeArgumentList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &TsTypeArgumentList, f: &mut JsFormatter) -> FormatResult<()> {
+        f.join_with(&soft_line_break_or_space())
+            .entries(
+                node.format_separated(",")
+                    .with_trailing_separator(TrailingSeparator::Disallowed),
+            )
+            .finish()
     }
 }

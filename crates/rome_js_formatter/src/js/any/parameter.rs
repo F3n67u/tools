@@ -1,13 +1,16 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyParameter;
-impl ToFormatElement for JsAnyParameter {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsAnyFormalParameter(node) => node.to_format_element(formatter),
-            Self::JsRestParameter(node) => node.to_format_element(formatter),
-            Self::TsThisParameter(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyJsParameter;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsParameter;
+impl FormatRule<AnyJsParameter> for FormatAnyJsParameter {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsParameter, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsParameter::AnyJsFormalParameter(node) => node.format().fmt(f),
+            AnyJsParameter::JsRestParameter(node) => node.format().fmt(f),
+            AnyJsParameter::TsThisParameter(node) => node.format().fmt(f),
         }
     }
 }

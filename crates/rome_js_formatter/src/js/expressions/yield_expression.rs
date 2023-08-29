@@ -1,19 +1,82 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
+use crate::prelude::*;
+use rome_formatter::write;
 
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::js::expressions::await_expression::await_or_yield_needs_parens;
+use crate::parentheses::NeedsParentheses;
+use rome_js_syntax::{JsSyntaxKind, JsYieldExpressionFields};
+use rome_js_syntax::{JsSyntaxNode, JsYieldExpression};
 
-use rome_js_syntax::JsYieldExpression;
-use rome_js_syntax::JsYieldExpressionFields;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsYieldExpression;
 
-impl ToFormatElement for JsYieldExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+impl FormatNodeRule<JsYieldExpression> for FormatJsYieldExpression {
+    fn fmt_fields(&self, node: &JsYieldExpression, f: &mut JsFormatter) -> FormatResult<()> {
         let JsYieldExpressionFields {
             yield_token,
             argument,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let argument = argument.format_or_empty(formatter)?;
+        write![f, [yield_token.format(), argument.format()]]
+    }
 
-        Ok(format_elements![yield_token.format(formatter)?, argument])
+    fn needs_parentheses(&self, item: &JsYieldExpression) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for JsYieldExpression {
+    fn needs_parentheses_with_parent(&self, parent: &JsSyntaxNode) -> bool {
+        matches!(parent.kind(), JsSyntaxKind::JS_AWAIT_EXPRESSION)
+            || await_or_yield_needs_parens(parent, self.syntax())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::{assert_needs_parentheses, assert_not_needs_parentheses};
+    use rome_js_syntax::JsYieldExpression;
+
+    #[test]
+    fn needs_parentheses() {
+        assert_needs_parentheses!(
+            "function* test() { (yield a)`template` }",
+            JsYieldExpression
+        );
+        assert_needs_parentheses!("function* test() { +(yield a) }", JsYieldExpression);
+
+        assert_needs_parentheses!("function* test() { (yield a).b }", JsYieldExpression);
+        assert_needs_parentheses!("function* test() { (yield a)[b] }", JsYieldExpression);
+        assert_not_needs_parentheses!("function* test() { a[yield b] }", JsYieldExpression);
+
+        assert_needs_parentheses!("function* test() { (yield a)() }", JsYieldExpression);
+        assert_needs_parentheses!("function* test() { new (yield a)() }", JsYieldExpression);
+
+        assert_needs_parentheses!("function* test() { (yield a) && b }", JsYieldExpression);
+        assert_needs_parentheses!("function* test() { (yield a) + b }", JsYieldExpression);
+        assert_needs_parentheses!(
+            "function* test() { (yield a) instanceof b }",
+            JsYieldExpression
+        );
+        assert_needs_parentheses!("function* test() { (yield a) in b }", JsYieldExpression);
+
+        assert_needs_parentheses!("function* test() { [...(yield a)] }", JsYieldExpression);
+        assert_needs_parentheses!("function* test() { ({...(yield b)}) }", JsYieldExpression);
+        assert_needs_parentheses!("function* test() { call(...(yield b)) }", JsYieldExpression);
+
+        assert_needs_parentheses!(
+            "function* test() { class A extends (yield b) {} }",
+            JsYieldExpression
+        );
+
+        assert_needs_parentheses!(
+            "function* test() { (yield b) as number }",
+            JsYieldExpression
+        );
+        assert_needs_parentheses!("function* test() { (yield b)! }", JsYieldExpression);
+
+        assert_needs_parentheses!("function* test() { (yield b) ? b : c }", JsYieldExpression);
+        assert_not_needs_parentheses!("function* test() { a ? yield b : c }", JsYieldExpression);
+        assert_not_needs_parentheses!("function* test() { a ? b : yield c }", JsYieldExpression);
     }
 }

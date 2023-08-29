@@ -1,16 +1,15 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::TsMappedTypeAsClause;
+use crate::prelude::*;
 
-impl ToFormatElement for TsMappedTypeAsClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(format_elements![
-            self.as_token().format_with(formatter, |as_token| {
-                format_elements![as_token, space_token()]
-            })?,
-            self.ty().format(formatter)?
-        ])
+use rome_formatter::write;
+use rome_js_syntax::{TsMappedTypeAsClause, TsMappedTypeAsClauseFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsMappedTypeAsClause;
+
+impl FormatNodeRule<TsMappedTypeAsClause> for FormatTsMappedTypeAsClause {
+    fn fmt_fields(&self, node: &TsMappedTypeAsClause, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsMappedTypeAsClauseFields { as_token, ty } = node.as_fields();
+
+        write![f, [as_token.format(), space(), ty.format()]]
     }
 }

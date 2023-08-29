@@ -1,14 +1,17 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsxAnyElementName;
-impl ToFormatElement for JsxAnyElementName {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsxName(node) => node.to_format_element(formatter),
-            Self::JsxReferenceIdentifier(node) => node.to_format_element(formatter),
-            Self::JsxMemberName(node) => node.to_format_element(formatter),
-            Self::JsxNamespaceName(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyJsxElementName;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsxElementName;
+impl FormatRule<AnyJsxElementName> for FormatAnyJsxElementName {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsxElementName, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsxElementName::JsxName(node) => node.format().fmt(f),
+            AnyJsxElementName::JsxReferenceIdentifier(node) => node.format().fmt(f),
+            AnyJsxElementName::JsxMemberName(node) => node.format().fmt(f),
+            AnyJsxElementName::JsxNamespaceName(node) => node.format().fmt(f),
         }
     }
 }

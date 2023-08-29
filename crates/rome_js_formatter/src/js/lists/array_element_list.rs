@@ -1,26 +1,89 @@
-use std::convert::Infallible;
+use crate::prelude::*;
+use rome_formatter::{write, CstFormatContext, FormatRuleWithOptions, GroupId};
 
-use crate::formatter::TrailingSeparator;
-use crate::utils::array::format_array_node;
-use crate::{
-    fill_elements, token, utils::has_formatter_trivia, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::utils::array::write_array_node;
 
-use rome_js_syntax::{JsAnyExpression, JsArrayElementList};
+use crate::context::trailing_comma::FormatTrailingComma;
+use rome_js_syntax::JsArrayElementList;
 use rome_rowan::{AstNode, AstSeparatedList};
 
-impl ToFormatElement for JsArrayElementList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        if !has_formatter_trivia(self.syntax()) && can_print_fill(self) {
-            return Ok(fill_elements(
-                // Using format_separated is valid in this case as can_print_fill does not allow holes
-                formatter.format_separated(self, || token(","), TrailingSeparator::default())?,
-            ));
-        }
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsArrayElementList {
+    group_id: Option<GroupId>,
+}
 
-        format_array_node(self, formatter)
+impl FormatRuleWithOptions<JsArrayElementList> for FormatJsArrayElementList {
+    type Options = Option<GroupId>;
+
+    fn with_options(mut self, options: Self::Options) -> Self {
+        self.group_id = options;
+        self
     }
+}
+
+impl FormatRule<JsArrayElementList> for FormatJsArrayElementList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &JsArrayElementList, f: &mut JsFormatter) -> FormatResult<()> {
+        let layout = if can_concisely_print_array_list(node, f.context().comments()) {
+            ArrayLayout::Fill
+        } else {
+            ArrayLayout::OnePerLine
+        };
+
+        match layout {
+            ArrayLayout::Fill => {
+                let trailing_separator = FormatTrailingComma::ES5.trailing_separator(f.options());
+
+                let mut filler = f.fill();
+
+                // Using format_separated is valid in this case as can_print_fill does not allow holes
+                for (element, formatted) in node.iter().zip(
+                    node.format_separated(",")
+                        .with_trailing_separator(trailing_separator)
+                        .with_group_id(self.group_id),
+                ) {
+                    filler.entry(
+                        &format_once(|f| {
+                            if get_lines_before(element?.syntax()) > 1 {
+                                write!(f, [empty_line()])
+                            } else {
+                                write!(f, [soft_line_break_or_space()])
+                            }
+                        }),
+                        &formatted,
+                    );
+                }
+
+                filler.finish()
+            }
+            ArrayLayout::OnePerLine => write_array_node(node, f),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum ArrayLayout {
+    /// Tries to fit as many array elements on a single line as possible.
+    ///
+    /// ```javascript
+    /// [
+    ///     1, 2, 3,
+    ///     5, 6,
+    /// ]
+    /// ```
+    Fill,
+
+    /// Prints every element on a single line if the whole array expression exceeds the line width, or any
+    /// of its elements gets printed in *expanded* mode.
+    /// ```javascript
+    /// [
+    ///     a.b(),
+    ///     4,
+    ///     3,
+    /// ]
+    /// ```
+    OnePerLine,
 }
 
 /// Returns true if the provided JsArrayElementList could
@@ -30,44 +93,63 @@ impl ToFormatElement for JsArrayElementList {
 /// The underlying logic only allows lists of literal expressions
 /// with 10 or less characters, potentially wrapped in a "short"
 /// unary expression (+, -, ~ or !)
-fn can_print_fill(list: &JsArrayElementList) -> bool {
-    use rome_js_syntax::JsAnyArrayElement::*;
-    use rome_js_syntax::JsAnyExpression::*;
+pub(crate) fn can_concisely_print_array_list(
+    list: &JsArrayElementList,
+    comments: &JsComments,
+) -> bool {
+    use rome_js_syntax::AnyJsArrayElement::*;
+    use rome_js_syntax::AnyJsExpression::*;
     use rome_js_syntax::JsUnaryOperator::*;
 
-    list.iter().all(|item| match item {
-        Ok(JsAnyExpression(JsUnaryExpression(expr))) => {
-            match expr.operator() {
-                Ok(Plus | Minus | BitwiseNot | LogicalNot) => {}
-                _ => return false,
-            }
-
-            if let Ok(expr) = expr.argument() {
-                is_short_literal(&expr)
-            } else {
-                false
-            }
-        }
-        Ok(JsAnyExpression(expr)) => is_short_literal(&expr),
-        _ => false,
-    })
-}
-
-/// Returns true if the provided expression is a literal with 10 or less characters
-fn is_short_literal(expr: &JsAnyExpression) -> bool {
-    match expr {
-        JsAnyExpression::JsAnyLiteralExpression(lit) => {
-            let token_len = lit
-                .syntax()
-                .text_trimmed()
-                .try_fold_chunks::<_, _, Infallible>(0, |sum, chunk| {
-                    // Count actual characters instead of byte length
-                    Ok(sum + chunk.chars().count())
-                })
-                .expect("the above fold operation is infallible");
-
-            token_len <= 10
-        }
-        _ => false,
+    if list.is_empty() {
+        return false;
     }
+
+    list.elements().all(|item| {
+        let syntax = match item.into_node() {
+            Ok(AnyJsExpression(AnyJsLiteralExpression(
+                rome_js_syntax::AnyJsLiteralExpression::JsNumberLiteralExpression(literal),
+            ))) => literal.into_syntax(),
+
+            Ok(AnyJsExpression(JsUnaryExpression(expr))) => {
+                let signed = matches!(expr.operator(), Ok(Plus | Minus));
+                let argument = expr.argument();
+
+                match argument {
+                    Ok(AnyJsLiteralExpression(
+                        rome_js_syntax::AnyJsLiteralExpression::JsNumberLiteralExpression(literal),
+                    )) => {
+                        if signed && !comments.has_comments(literal.syntax()) {
+                            expr.into_syntax()
+                        } else {
+                            return false;
+                        }
+                    }
+                    _ => {
+                        return false;
+                    }
+                }
+            }
+
+            _ => {
+                return false;
+            }
+        };
+
+        // Does not have a line comment ending on the same line
+        // ```javascript
+        // [ a // not this
+        //  b];
+        //
+        // [
+        //   // This is fine
+        //   thats
+        // ]
+        // ```
+        !comments
+            .trailing_comments(&syntax)
+            .iter()
+            .filter(|comment| comment.kind().is_line())
+            .any(|comment| comment.lines_before() == 0)
+    })
 }

@@ -1,15 +1,21 @@
 use std::{
+    borrow::Cow,
     fmt::{self, Debug},
     io,
 };
 
+use rome_text_size::TextSize;
 use termcolor::{Color, ColorSpec};
 
 use crate::fmt::{Display, Formatter, MarkupElements, Write};
 
 /// Enumeration of all the supported markup elements
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum MarkupElement {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)
+)]
+pub enum MarkupElement<'fmt> {
     Emphasis,
     Dim,
     Italic,
@@ -18,9 +24,25 @@ pub enum MarkupElement {
     Success,
     Warn,
     Info,
+    Inverse,
+    Hyperlink { href: Cow<'fmt, str> },
 }
 
-impl MarkupElement {
+impl fmt::Display for MarkupElement<'_> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Self::Hyperlink { href } = self {
+            if fmt.alternate() {
+                write!(fmt, "Hyperlink href={:?}", href.as_ref())
+            } else {
+                fmt.write_str("Hyperlink")
+            }
+        } else {
+            write!(fmt, "{self:?}")
+        }
+    }
+}
+
+impl<'fmt> MarkupElement<'fmt> {
     /// Mutate a [ColorSpec] object in place to apply this element's associated
     /// style to it
     pub(crate) fn update_color(&self, color: &mut ColorSpec) {
@@ -58,6 +80,28 @@ impl MarkupElement {
 
                 color.set_fg(Some(BLUE));
             }
+
+            MarkupElement::Inverse | MarkupElement::Hyperlink { .. } => {}
+        }
+    }
+
+    fn to_owned(&self) -> MarkupElement<'static> {
+        match self {
+            MarkupElement::Emphasis => MarkupElement::Emphasis,
+            MarkupElement::Dim => MarkupElement::Dim,
+            MarkupElement::Italic => MarkupElement::Italic,
+            MarkupElement::Underline => MarkupElement::Underline,
+            MarkupElement::Error => MarkupElement::Error,
+            MarkupElement::Success => MarkupElement::Success,
+            MarkupElement::Warn => MarkupElement::Warn,
+            MarkupElement::Info => MarkupElement::Info,
+            MarkupElement::Inverse => MarkupElement::Inverse,
+            MarkupElement::Hyperlink { href } => MarkupElement::Hyperlink {
+                href: Cow::Owned(match href {
+                    Cow::Borrowed(href) => href.to_string(),
+                    Cow::Owned(href) => href.clone(),
+                }),
+            },
         }
     }
 }
@@ -66,28 +110,47 @@ impl MarkupElement {
 /// associated styles applied to it
 #[derive(Copy, Clone)]
 pub struct MarkupNode<'fmt> {
-    pub elements: &'fmt [MarkupElement],
+    pub elements: &'fmt [MarkupElement<'fmt>],
     pub content: &'fmt dyn Display,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)
+)]
 pub struct MarkupNodeBuf {
-    pub elements: Vec<MarkupElement>,
+    pub elements: Vec<MarkupElement<'static>>,
     pub content: String,
 }
 
 impl Debug for MarkupNodeBuf {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         for element in &self.elements {
-            write!(fmt, "<{element:?}>")?;
+            write!(fmt, "<{element:#}>")?;
         }
-        write!(fmt, "{:?}", self.content)?;
+
+        if fmt.alternate() {
+            let mut content = self.content.as_str();
+            while let Some(index) = content.find('\n') {
+                let (before, after) = content.split_at(index + 1);
+                if !before.is_empty() {
+                    writeln!(fmt, "{before:?}")?;
+                }
+                content = after;
+            }
+
+            if !content.is_empty() {
+                write!(fmt, "{content:?}")?;
+            }
+        } else {
+            write!(fmt, "{:?}", self.content)?;
+        }
+
         for element in self.elements.iter().rev() {
-            write!(fmt, "</{element:?}>")?;
+            write!(fmt, "</{element}>")?;
         }
-        if fmt.alternate() && self.content.contains('\n') {
-            writeln!(fmt)?;
-        }
+
         Ok(())
     }
 }
@@ -104,18 +167,26 @@ pub struct Markup<'fmt>(pub &'fmt [MarkupNode<'fmt>]);
 impl<'fmt> Markup<'fmt> {
     pub fn to_owned(&self) -> MarkupBuf {
         let mut result = MarkupBuf(Vec::new());
-        // SAFETY: The implementation of Write for MarkupBuf bellow always returns Ok
+        // SAFETY: The implementation of Write for MarkupBuf below always returns Ok
         Formatter::new(&mut result).write_markup(*self).unwrap();
         result
     }
 }
 
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)
+)]
 pub struct MarkupBuf(pub Vec<MarkupNodeBuf>);
 
 impl MarkupBuf {
-    pub(crate) fn is_empty(&self) -> bool {
-        self.0.is_empty()
+    pub fn is_empty(&self) -> bool {
+        self.0.iter().all(|node| node.content.is_empty())
+    }
+
+    pub fn len(&self) -> TextSize {
+        self.0.iter().map(|node| TextSize::of(&node.content)).sum()
     }
 }
 
@@ -123,8 +194,9 @@ impl Write for MarkupBuf {
     fn write_str(&mut self, elements: &MarkupElements, content: &str) -> io::Result<()> {
         let mut styles = Vec::new();
         elements.for_each(&mut |elements| {
-            styles.extend_from_slice(elements);
-        });
+            styles.extend(elements.iter().map(MarkupElement::to_owned));
+            Ok(())
+        })?;
 
         if let Some(last) = self.0.last_mut() {
             if last.elements == styles {
@@ -144,8 +216,9 @@ impl Write for MarkupBuf {
     fn write_fmt(&mut self, elements: &MarkupElements, content: fmt::Arguments) -> io::Result<()> {
         let mut styles = Vec::new();
         elements.for_each(&mut |elements| {
-            styles.extend_from_slice(elements);
-        });
+            styles.extend(elements.iter().map(MarkupElement::to_owned));
+            Ok(())
+        })?;
 
         if let Some(last) = self.0.last_mut() {
             if last.elements == styles {
@@ -180,7 +253,7 @@ impl Display for MarkupBuf {
 impl Debug for MarkupBuf {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         for node in &self.0 {
-            write!(fmt, "{node:?}")?;
+            Debug::fmt(node, fmt)?;
         }
         Ok(())
     }

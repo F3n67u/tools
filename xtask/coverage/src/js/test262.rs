@@ -1,8 +1,9 @@
 use crate::runner::{
-    create_unknown_node_in_tree_diagnostic, TestCase, TestCaseFiles, TestRunOutcome, TestSuite,
+    create_bogus_node_in_tree_diagnostic, TestCase, TestCaseFiles, TestRunOutcome, TestSuite,
 };
 use regex::Regex;
-use rome_js_parser::{parse, SourceType};
+use rome_js_parser::{parse, JsParserOptions};
+use rome_js_syntax::JsFileSource;
 use rome_rowan::syntax::SyntaxKind;
 use rome_rowan::AstNode;
 use serde::Deserialize;
@@ -82,7 +83,7 @@ impl Test262TestCase {
         Self { name, code, meta }
     }
 
-    fn execute_test(&self, append_use_strict: bool, source_type: SourceType) -> TestRunOutcome {
+    fn execute_test(&self, append_use_strict: bool, source_type: JsFileSource) -> TestRunOutcome {
         let code = if append_use_strict {
             format!("\"use strict\";\n{}", self.code)
         } else {
@@ -96,18 +97,23 @@ impl Test262TestCase {
             .filter(|neg| neg.phase == Phase::Parse)
             .is_some();
 
-        let files =
-            TestCaseFiles::single(self.name.clone(), self.code.clone(), source_type.clone());
+        let options = JsParserOptions::default().with_parse_class_parameter_decorators();
+        let files = TestCaseFiles::single(
+            self.name.clone(),
+            self.code.clone(),
+            source_type,
+            options.clone(),
+        );
 
-        match parse(&code, 0, source_type).ok() {
+        match parse(&code, source_type, options).ok() {
             Ok(root) if !should_fail => {
-                if let Some(unknown) = root
+                if let Some(bogus) = root
                     .syntax()
                     .descendants()
-                    .find(|descendant| descendant.kind().is_unknown())
+                    .find(|descendant| descendant.kind().is_bogus())
                 {
                     TestRunOutcome::IncorrectlyErrored {
-                        errors: vec![create_unknown_node_in_tree_diagnostic(0, unknown)],
+                        errors: vec![create_bogus_node_in_tree_diagnostic(bogus)],
                         files,
                     }
                 } else {
@@ -130,14 +136,14 @@ impl TestCase for Test262TestCase {
     fn run(&self) -> TestRunOutcome {
         let meta = &self.meta;
         if meta.flags.contains(&TestFlag::OnlyStrict) {
-            self.execute_test(true, SourceType::js_script())
+            self.execute_test(true, JsFileSource::js_script())
         } else if meta.flags.contains(&TestFlag::Module) {
-            self.execute_test(false, SourceType::js_module())
+            self.execute_test(false, JsFileSource::js_module())
         } else if meta.flags.contains(&TestFlag::NoStrict) || meta.flags.contains(&TestFlag::Raw) {
-            self.execute_test(false, SourceType::js_script())
+            self.execute_test(false, JsFileSource::js_script())
         } else {
-            let l = self.execute_test(false, SourceType::js_script());
-            let r = self.execute_test(true, SourceType::js_script());
+            let l = self.execute_test(false, JsFileSource::js_script());
+            let r = self.execute_test(true, JsFileSource::js_script());
             merge_outcomes(l, r)
         }
     }
@@ -162,7 +168,7 @@ impl TestSuite for Test262TestSuite {
     }
 
     fn load_test(&self, path: &Path) -> Option<Box<dyn TestCase>> {
-        let code = std::fs::read_to_string(&path).ok()?;
+        let code = std::fs::read_to_string(path).ok()?;
 
         let meta = read_metadata(&code).ok()?;
 

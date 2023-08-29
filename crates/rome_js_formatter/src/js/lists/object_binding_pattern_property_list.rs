@@ -1,17 +1,23 @@
-use crate::formatter::TrailingSeparator;
-use crate::{
-    join_elements, soft_line_break_or_space, token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
-use rome_js_syntax::{JsAnyObjectBindingPatternMember, JsObjectBindingPatternPropertyList};
+use crate::context::trailing_comma::FormatTrailingComma;
+use crate::prelude::*;
+use rome_js_syntax::{AnyJsObjectBindingPatternMember, JsObjectBindingPatternPropertyList};
 
-impl ToFormatElement for JsObjectBindingPatternPropertyList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsObjectBindingPatternPropertyList;
+
+impl FormatRule<JsObjectBindingPatternPropertyList> for FormatJsObjectBindingPatternPropertyList {
+    type Context = JsFormatContext;
+
+    fn fmt(
+        &self,
+        node: &JsObjectBindingPatternPropertyList,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
         // The trailing separator is disallowed after a rest element
-        let has_trailing_rest = match self.into_iter().last() {
+        let has_trailing_rest = match node.into_iter().last() {
             Some(elem) => matches!(
                 elem?,
-                JsAnyObjectBindingPatternMember::JsObjectBindingPatternRest(_)
+                AnyJsObjectBindingPatternMember::JsObjectBindingPatternRest(_)
             ),
             None => false,
         };
@@ -19,12 +25,20 @@ impl ToFormatElement for JsObjectBindingPatternPropertyList {
         let trailing_separator = if has_trailing_rest {
             TrailingSeparator::Disallowed
         } else {
-            TrailingSeparator::Allowed
+            FormatTrailingComma::ES5.trailing_separator(f.options())
         };
 
-        Ok(join_elements(
-            soft_line_break_or_space(),
-            formatter.format_separated(self, || token(","), trailing_separator)?,
-        ))
+        let entries = node
+            .format_separated(",")
+            .with_trailing_separator(trailing_separator)
+            .zip(node.iter());
+
+        let mut join = f.join_nodes_with_soft_line();
+
+        for (format_entry, node) in entries {
+            join.entry(node?.syntax(), &format_entry);
+        }
+
+        join.finish()
     }
 }

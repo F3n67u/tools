@@ -48,7 +48,7 @@ JsModule {
             r_paren_token: R_PAREN@48..50 ")" [] [Whitespace(" ")],
             body: missing (required),
         },
-        JsUnknownStatement {
+        JsBogusStatement {
             items: [
                 R_CURLY@50..51 "}" [] [],
             ],
@@ -97,51 +97,92 @@ JsModule {
         0: TRUE_KW@44..48 "true" [] []
       3: R_PAREN@48..50 ")" [] [Whitespace(" ")]
       4: (empty)
-    4: JS_UNKNOWN_STATEMENT@50..51
+    4: JS_BOGUS_STATEMENT@50..51
       0: R_CURLY@50..51 "}" [] []
   3: EOF@51..52 "" [Newline("\n")] []
 --
-error[SyntaxError]: expected `'('` but instead found `true`
-  ┌─ while_stmt_err.js:1:7
-  │
-1 │ while true {}
-  │       ^^^^ unexpected
+while_stmt_err.js:1:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `(` but instead found `true`
+  
+  > 1 │ while true {}
+      │       ^^^^
+    2 │ while {}
+    3 │ while (true {}
+  
+  i Remove true
+  
 --
-error[SyntaxError]: expected `')'` but instead found `{`
-  ┌─ while_stmt_err.js:1:12
-  │
-1 │ while true {}
-  │            ^ unexpected
+while_stmt_err.js:1:12 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `)` but instead found `{`
+  
+  > 1 │ while true {}
+      │            ^
+    2 │ while {}
+    3 │ while (true {}
+  
+  i Remove {
+  
 --
-error[SyntaxError]: expected `'('` but instead found `{`
-  ┌─ while_stmt_err.js:2:7
-  │
-2 │ while {}
-  │       ^ unexpected
+while_stmt_err.js:2:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `(` but instead found `{`
+  
+    1 │ while true {}
+  > 2 │ while {}
+      │       ^
+    3 │ while (true {}
+    4 │ while true) }
+  
+  i Remove {
+  
 --
-error[SyntaxError]: expected `')'` but instead found `{`
-  ┌─ while_stmt_err.js:3:13
-  │
-3 │ while (true {}
-  │             ^ unexpected
+while_stmt_err.js:3:13 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `)` but instead found `{`
+  
+    1 │ while true {}
+    2 │ while {}
+  > 3 │ while (true {}
+      │             ^
+    4 │ while true) }
+    5 │ 
+  
+  i Remove {
+  
 --
-error[SyntaxError]: expected `'('` but instead found `true`
-  ┌─ while_stmt_err.js:4:7
-  │
-4 │ while true) }
-  │       ^^^^ unexpected
+while_stmt_err.js:4:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `(` but instead found `true`
+  
+    2 │ while {}
+    3 │ while (true {}
+  > 4 │ while true) }
+      │       ^^^^
+    5 │ 
+  
+  i Remove true
+  
 --
-error[SyntaxError]: expected a statement but instead found '}'
-  ┌─ while_stmt_err.js:4:13
-  │
-4 │ while true) }
-  │             ^ Expected a statement here
+while_stmt_err.js:4:13 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected a statement but instead found '}'
+  
+    2 │ while {}
+    3 │ while (true {}
+  > 4 │ while true) }
+      │             ^
+    5 │ 
+  
+  i Expected a statement here
+  
+    2 │ while {}
+    3 │ while (true {}
+  > 4 │ while true) }
+      │             ^
+    5 │ 
+  
 --
 while true {}
 while {}

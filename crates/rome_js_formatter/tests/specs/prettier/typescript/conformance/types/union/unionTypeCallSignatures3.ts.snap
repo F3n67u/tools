@@ -1,11 +1,12 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 119
-expression: unionTypeCallSignatures3.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/conformance/types/union/unionTypeCallSignatures3.ts
 ---
+
 # Input
-```js
+
+```ts
 ﻿function f1(s: string) { }
 function f2(s?: string) { }
 function f3(...s: string[]) { }
@@ -20,8 +21,23 @@ fUnion(""); // All constituents can be called by passing a single string.
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,4 +1,4 @@
+-﻿function f1(s: string) {}
++function f1(s: string) {}
+ function f2(s?: string) {}
+ function f3(...s: string[]) {}
+ function f4(s: string, s2?: string) {}
+```
+
 # Output
-```js
+
+```ts
 function f1(s: string) {}
 function f2(s?: string) {}
 function f3(...s: string[]) {}
@@ -40,7 +56,6 @@ var fUnion:
   | typeof f7;
 
 fUnion(""); // All constituents can be called by passing a single string.
-
 ```
 
 

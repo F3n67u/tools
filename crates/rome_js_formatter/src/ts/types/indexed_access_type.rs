@@ -1,21 +1,39 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsIndexedAccessType;
-use rome_js_syntax::TsIndexedAccessTypeFields;
+use crate::prelude::*;
 
-impl ToFormatElement for TsIndexedAccessType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::TsIndexedAccessTypeFields;
+use rome_js_syntax::{JsSyntaxNode, TsIndexedAccessType};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsIndexedAccessType;
+
+impl FormatNodeRule<TsIndexedAccessType> for FormatTsIndexedAccessType {
+    fn fmt_fields(&self, node: &TsIndexedAccessType, f: &mut JsFormatter) -> FormatResult<()> {
         let TsIndexedAccessTypeFields {
             object_type,
             l_brack_token,
             index_type,
             r_brack_token,
-        } = self.as_fields();
-        Ok(format_elements![
-            object_type.format(formatter)?,
-            l_brack_token.format(formatter)?,
-            index_type.format(formatter)?,
-            r_brack_token.format(formatter)?
-        ])
+        } = node.as_fields();
+        write![
+            f,
+            [
+                object_type.format(),
+                l_brack_token.format(),
+                index_type.format(),
+                r_brack_token.format()
+            ]
+        ]
+    }
+
+    fn needs_parentheses(&self, item: &TsIndexedAccessType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsIndexedAccessType {
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

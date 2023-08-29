@@ -1,16 +1,15 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
+use crate::prelude::*;
+use rome_formatter::{format_args, write, CstFormatContext};
 
-use crate::{
-    format_elements, group_elements, soft_line_break_or_space, space_token, token, FormatElement,
-    FormatResult, Formatter, ToFormatElement,
-};
-
-use rome_js_syntax::JsAnyStatement;
+use crate::utils::FormatStatementBody;
 use rome_js_syntax::JsForStatement;
 use rome_js_syntax::JsForStatementFields;
 
-impl ToFormatElement for JsForStatement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsForStatement;
+
+impl FormatNodeRule<JsForStatement> for FormatJsForStatement {
+    fn fmt_fields(&self, node: &JsForStatement, f: &mut JsFormatter) -> FormatResult<()> {
         let JsForStatementFields {
             for_token,
             l_paren_token,
@@ -21,42 +20,69 @@ impl ToFormatElement for JsForStatement {
             update,
             r_paren_token,
             body,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let inner = if initializer.is_some() || test.is_some() || update.is_some() {
-            format_elements![
-                initializer.format_or_empty(formatter)?,
-                first_semi_token.format(formatter)?,
-                soft_line_break_or_space(),
-                test.format_or_empty(formatter)?,
-                second_semi_token.format(formatter)?,
-                soft_line_break_or_space(),
-                update.format_or_empty(formatter)?,
-            ]
-        } else {
-            format_elements![
-                first_semi_token.format(formatter)?,
-                second_semi_token.format(formatter)?,
-            ]
-        };
-
-        // Force semicolon insertion for empty bodies
         let body = body?;
-        let body = if matches!(body, JsAnyStatement::JsEmptyStatement(_)) {
-            format_elements![body.format(formatter)?, token(";")]
-        } else {
-            format_elements![space_token(), body.format(formatter)?]
-        };
+        let l_paren_token = l_paren_token?;
 
-        Ok(group_elements(format_elements![
-            for_token.format(formatter)?,
-            space_token(),
-            formatter.format_delimited_soft_block_indent(
-                &l_paren_token?,
-                inner,
-                &r_paren_token?,
-            )?,
-            body
-        ]))
+        let format_body = FormatStatementBody::new(&body);
+
+        // Move dangling trivia between the `for /* this */ (` to the top of the `for` and
+        // add a line break after.
+        let comments = f.context().comments();
+        let dangling_comments = comments.dangling_comments(node.syntax());
+        if !dangling_comments.is_empty() {
+            write!(
+                f,
+                [
+                    format_dangling_comments(node.syntax()),
+                    soft_line_break_or_space()
+                ]
+            )?;
+        }
+
+        if initializer.is_none() && test.is_none() && update.is_none() {
+            return write!(
+                f,
+                [group(&format_args![
+                    for_token.format(),
+                    space(),
+                    l_paren_token.format(),
+                    first_semi_token.format(),
+                    second_semi_token.format(),
+                    r_paren_token.format(),
+                    format_body
+                ])]
+            );
+        }
+
+        let format_inner = format_with(|f| {
+            write!(
+                f,
+                [
+                    for_token.format(),
+                    space(),
+                    l_paren_token.format(),
+                    group(&soft_block_indent(&format_args![
+                        initializer.format(),
+                        first_semi_token.format(),
+                        soft_line_break_or_space(),
+                        test.format(),
+                        second_semi_token.format(),
+                        soft_line_break_or_space(),
+                        update.format()
+                    ])),
+                    r_paren_token.format(),
+                    format_body
+                ]
+            )
+        });
+
+        write!(f, [group(&format_inner)])
+    }
+
+    fn fmt_dangling_comments(&self, _: &JsForStatement, _: &mut JsFormatter) -> FormatResult<()> {
+        // Formatted inside of `fmt_fields`
+        Ok(())
     }
 }

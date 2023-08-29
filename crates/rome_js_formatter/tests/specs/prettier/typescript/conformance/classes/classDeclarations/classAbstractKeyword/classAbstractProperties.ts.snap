@@ -1,11 +1,12 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 125
-expression: classAbstractProperties.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/conformance/classes/classDeclarations/classAbstractKeyword/classAbstractProperties.ts
 ---
+
 # Input
-```js
+
+```ts
 abstract class A {
     abstract x : number;
     public abstract y : number;
@@ -21,8 +22,32 @@ abstract class A {
 }
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -2,12 +2,12 @@
+   abstract x: number;
+   public abstract y: number;
+   protected abstract z: number;
+-  private abstract w: number;
++  private abstract w : number;
+ 
+   abstract m: () => void;
+ 
+   abstract foo_x(): number;
+   public abstract foo_y(): number;
+   protected abstract foo_z(): number;
+-  private abstract foo_w(): number;
++  private abstract foo_w() : number;
+ }
+```
+
 # Output
-```js
+
+```ts
 abstract class A {
   abstract x: number;
   public abstract y: number;
@@ -36,23 +61,65 @@ abstract class A {
   protected abstract foo_z(): number;
   private abstract foo_w() : number;
 }
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: 'private' cannot be used with 'abstract' modifier.
-  ┌─ classAbstractProperties.ts:5:5
-  │
-5 │     private abstract w : number;
-  │     ^^^^^^^ -------- 'abstract' modifier
+classAbstractProperties.ts:5:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: 'private' cannot be used with 'abstract' modifier.
-   ┌─ classAbstractProperties.ts:12:5
-   │
-12 │     private abstract foo_w() : number;
-   │     ^^^^^^^ -------- 'abstract' modifier
+  × 'private' cannot be used with 'abstract' modifier.
+  
+    3 │     public abstract y : number;
+    4 │     protected abstract z : number;
+  > 5 │     private abstract w : number;
+      │     ^^^^^^^
+    6 │     
+    7 │     abstract m: () => void;·
+  
+  i 'private' modifier
+  
+    3 │     public abstract y : number;
+    4 │     protected abstract z : number;
+  > 5 │     private abstract w : number;
+      │     ^^^^^^^
+    6 │     
+    7 │     abstract m: () => void;·
+  
+  i 'abstract' modifier
+  
+    3 │     public abstract y : number;
+    4 │     protected abstract z : number;
+  > 5 │     private abstract w : number;
+      │             ^^^^^^^^
+    6 │     
+    7 │     abstract m: () => void;·
+  
+classAbstractProperties.ts:12:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × 'private' cannot be used with 'abstract' modifier.
+  
+    10 │     public abstract foo_y() : number;
+    11 │     protected abstract foo_z() : number;
+  > 12 │     private abstract foo_w() : number;
+       │     ^^^^^^^
+    13 │ }
+  
+  i 'private' modifier
+  
+    10 │     public abstract foo_y() : number;
+    11 │     protected abstract foo_z() : number;
+  > 12 │     private abstract foo_w() : number;
+       │     ^^^^^^^
+    13 │ }
+  
+  i 'abstract' modifier
+  
+    10 │     public abstract foo_y() : number;
+    11 │     protected abstract foo_z() : number;
+  > 12 │     private abstract foo_w() : number;
+       │             ^^^^^^^^
+    13 │ }
+  
 
 ```
 

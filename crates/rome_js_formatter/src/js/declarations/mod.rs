@@ -1,9 +1,9 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-mod catch_declaration;
-mod class_declaration;
-mod class_export_default_declaration;
-mod for_variable_declaration;
-mod function_declaration;
-mod function_export_default_declaration;
-mod variable_declaration;
+pub(crate) mod catch_declaration;
+pub(crate) mod class_declaration;
+pub(crate) mod class_export_default_declaration;
+pub(crate) mod for_variable_declaration;
+pub(crate) mod function_declaration;
+pub(crate) mod function_export_default_declaration;
+pub(crate) mod variable_declaration;

@@ -1,13 +1,18 @@
-use crate::arc::{HeaderSlice, ThinArc};
+use crate::arc::{Arc, HeaderSlice, ThinArc};
 use crate::TriviaPiece;
 use countme::Count;
-use std::fmt;
+use rome_text_size::TextSize;
 use std::fmt::Formatter;
-use text_size::TextSize;
+use std::mem::ManuallyDrop;
+use std::{fmt, mem, ptr};
 
 #[derive(PartialEq, Eq, Hash)]
 pub(crate) struct GreenTriviaHead {
     _c: Count<GreenTrivia>,
+}
+
+pub(crate) fn has_live() -> bool {
+    countme::get::<GreenTrivia>().live > 0
 }
 
 type ReprThin = HeaderSlice<GreenTriviaHead, [TriviaPiece; 0]>;
@@ -27,6 +32,15 @@ impl GreenTriviaData {
     #[inline]
     pub fn pieces(&self) -> &[TriviaPiece] {
         self.data.slice()
+    }
+
+    #[inline]
+    pub(crate) fn to_owned(&self) -> GreenTrivia {
+        unsafe {
+            let green = GreenTrivia::from_raw(self as *const _ as *mut _);
+            let green = ManuallyDrop::new(green);
+            GreenTrivia::clone(&green)
+        }
     }
 }
 
@@ -110,6 +124,22 @@ impl GreenTrivia {
     pub fn get_piece(&self, index: usize) -> Option<&TriviaPiece> {
         self.pieces().get(index)
     }
+
+    pub(crate) fn into_raw(self) -> *mut GreenTriviaData {
+        self.ptr.map_or_else(ptr::null_mut, |ptr| {
+            Arc::from_thin(ptr).into_raw().cast().as_ptr()
+        })
+    }
+
+    pub(crate) unsafe fn from_raw(ptr: *mut GreenTriviaData) -> Self {
+        if let Some(ptr) = ptr.as_ref() {
+            let arc = Arc::from_raw(&ptr.data as *const ReprThin);
+            let arc = mem::transmute::<Arc<ReprThin>, ThinArc<GreenTriviaHead, TriviaPiece>>(arc);
+            Self { ptr: Some(arc) }
+        } else {
+            Self { ptr: None }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -117,7 +147,7 @@ mod tests {
     use crate::green::trivia::{GreenTrivia, GreenTriviaHead};
     use crate::syntax::TriviaPieceKind;
     use crate::TriviaPiece;
-    use text_size::TextSize;
+    use rome_text_size::TextSize;
 
     impl GreenTrivia {
         /// Creates a trivia with a single whitespace piece
@@ -132,7 +162,7 @@ mod tests {
 
         /// Creates a trivia containing a single piece
         pub fn single<L: Into<TextSize>>(kind: TriviaPieceKind, len: L) -> Self {
-            Self::new(std::iter::once(TriviaPiece::new(kind, len)))
+            Self::new([TriviaPiece::new(kind, len)])
         }
     }
 

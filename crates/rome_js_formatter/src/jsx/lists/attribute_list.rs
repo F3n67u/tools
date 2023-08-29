@@ -1,7 +1,16 @@
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
 use rome_js_syntax::JsxAttributeList;
-impl ToFormatElement for JsxAttributeList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(formatter.format_list(self.clone()))
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatJsxAttributeList;
+
+impl FormatRule<JsxAttributeList> for FormatJsxAttributeList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &JsxAttributeList, f: &mut JsFormatter) -> FormatResult<()> {
+        f.join_with(&soft_line_break_or_space())
+            .entries(node.iter().formatted())
+            .finish()
     }
 }

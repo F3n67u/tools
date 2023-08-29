@@ -1,11 +1,19 @@
 use crate::syntax::SyntaxTrivia;
 use crate::{cursor, Language, NodeOrToken, SyntaxNode, SyntaxToken};
+use rome_text_size::{TextRange, TextSize};
 use std::iter;
-use text_size::TextRange;
+use std::ptr::NonNull;
 
 pub type SyntaxElement<L> = NodeOrToken<SyntaxNode<L>, SyntaxToken<L>>;
 
 impl<L: Language> SyntaxElement<L> {
+    pub fn key(&self) -> SyntaxElementKey {
+        match self {
+            NodeOrToken::Node(it) => it.key(),
+            NodeOrToken::Token(it) => it.key(),
+        }
+    }
+
     pub fn text_range(&self) -> TextRange {
         match self {
             NodeOrToken::Node(it) => it.text_range(),
@@ -48,6 +56,13 @@ impl<L: Language> SyntaxElement<L> {
         }
     }
 
+    pub(crate) fn index(&self) -> usize {
+        match self {
+            NodeOrToken::Node(it) => it.index(),
+            NodeOrToken::Token(it) => it.index(),
+        }
+    }
+
     pub fn ancestors(&self) -> impl Iterator<Item = SyntaxNode<L>> {
         let first = match self {
             NodeOrToken::Node(it) => Some(it.clone()),
@@ -70,10 +85,11 @@ impl<L: Language> SyntaxElement<L> {
         }
     }
 
-    pub fn detach(&self) {
+    #[must_use = "syntax elements are immutable, the result of update methods must be propagated to have any effect"]
+    pub fn detach(self) -> Self {
         match self {
-            NodeOrToken::Node(it) => it.detach(),
-            NodeOrToken::Token(it) => it.detach(),
+            NodeOrToken::Node(it) => Self::Node(it.detach()),
+            NodeOrToken::Token(it) => Self::Token(it.detach()),
         }
     }
 }
@@ -105,5 +121,17 @@ impl<L: Language> From<SyntaxToken<L>> for SyntaxElement<L> {
 impl<L: Language> From<SyntaxNode<L>> for SyntaxElement<L> {
     fn from(node: SyntaxNode<L>) -> SyntaxElement<L> {
         NodeOrToken::Node(node)
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub struct SyntaxElementKey {
+    node_data: NonNull<()>,
+    offset: TextSize,
+}
+
+impl SyntaxElementKey {
+    pub(crate) fn new(node_data: NonNull<()>, offset: TextSize) -> Self {
+        Self { node_data, offset }
     }
 }

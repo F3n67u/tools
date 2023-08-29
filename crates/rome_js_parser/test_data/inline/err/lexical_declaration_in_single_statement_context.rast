@@ -9,9 +9,10 @@ JsModule {
                 value_token: TRUE_KW@4..8 "true" [] [],
             },
             r_paren_token: R_PAREN@8..10 ")" [] [Whitespace(" ")],
-            consequent: JsUnknownStatement {
+            consequent: JsBogusStatement {
                 items: [
                     JsVariableDeclaration {
+                        await_token: missing (optional),
                         kind: LET_KW@10..14 "let" [] [Whitespace(" ")],
                         declarators: JsVariableDeclaratorList [
                             JsVariableDeclarator {
@@ -35,9 +36,10 @@ JsModule {
                 value_token: TRUE_KW@24..28 "true" [] [],
             },
             r_paren_token: R_PAREN@28..30 ")" [] [Whitespace(" ")],
-            body: JsUnknownStatement {
+            body: JsBogusStatement {
                 items: [
                     JsVariableDeclaration {
+                        await_token: missing (optional),
                         kind: CONST_KW@30..36 "const" [] [Whitespace(" ")],
                         declarators: JsVariableDeclaratorList [
                             JsVariableDeclarator {
@@ -72,10 +74,11 @@ JsModule {
       2: JS_BOOLEAN_LITERAL_EXPRESSION@4..8
         0: TRUE_KW@4..8 "true" [] []
       3: R_PAREN@8..10 ")" [] [Whitespace(" ")]
-      4: JS_UNKNOWN_STATEMENT@10..16
+      4: JS_BOGUS_STATEMENT@10..16
         0: JS_VARIABLE_DECLARATION@10..15
-          0: LET_KW@10..14 "let" [] [Whitespace(" ")]
-          1: JS_VARIABLE_DECLARATOR_LIST@14..15
+          0: (empty)
+          1: LET_KW@10..14 "let" [] [Whitespace(" ")]
+          2: JS_VARIABLE_DECLARATOR_LIST@14..15
             0: JS_VARIABLE_DECLARATOR@14..15
               0: JS_IDENTIFIER_BINDING@14..15
                 0: IDENT@14..15 "a" [] []
@@ -89,10 +92,11 @@ JsModule {
       2: JS_BOOLEAN_LITERAL_EXPRESSION@24..28
         0: TRUE_KW@24..28 "true" [] []
       3: R_PAREN@28..30 ")" [] [Whitespace(" ")]
-      4: JS_UNKNOWN_STATEMENT@30..42
+      4: JS_BOGUS_STATEMENT@30..42
         0: JS_VARIABLE_DECLARATION@30..41
-          0: CONST_KW@30..36 "const" [] [Whitespace(" ")]
-          1: JS_VARIABLE_DECLARATOR_LIST@36..41
+          0: (empty)
+          1: CONST_KW@30..36 "const" [] [Whitespace(" ")]
+          2: JS_VARIABLE_DECLARATOR_LIST@36..41
             0: JS_VARIABLE_DECLARATOR@36..41
               0: JS_IDENTIFIER_BINDING@36..38
                 0: IDENT@36..38 "b" [] [Whitespace(" ")]
@@ -104,19 +108,29 @@ JsModule {
         1: SEMICOLON@41..42 ";" [] []
   3: EOF@42..43 "" [Newline("\n")] []
 --
-error[SyntaxError]: Lexical declaration cannot appear in a single-statement context
-  ┌─ lexical_declaration_in_single_statement_context.js:1:11
-  │
-1 │ if (true) let a;
-  │           ^^^^^^ Wrap this declaration in a block statement
+lexical_declaration_in_single_statement_context.js:1:11 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Lexical declaration cannot appear in a single-statement context
+  
+  > 1 │ if (true) let a;
+      │           ^^^^^^
+    2 │ while (true) const b = 5;
+    3 │ 
+  
+  i Wrap this declaration in a block statement
+  
 --
-error[SyntaxError]: Lexical declaration cannot appear in a single-statement context
-  ┌─ lexical_declaration_in_single_statement_context.js:2:14
-  │
-2 │ while (true) const b = 5;
-  │              ^^^^^^^^^^^^ Wrap this declaration in a block statement
+lexical_declaration_in_single_statement_context.js:2:14 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Lexical declaration cannot appear in a single-statement context
+  
+    1 │ if (true) let a;
+  > 2 │ while (true) const b = 5;
+      │              ^^^^^^^^^^^^
+    3 │ 
+  
+  i Wrap this declaration in a block statement
+  
 --
 if (true) let a;
 while (true) const b = 5;

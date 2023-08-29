@@ -1,14 +1,44 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
+use rome_formatter::token::number::format_number_token;
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-
+use crate::parentheses::{is_member_object, NeedsParentheses};
 use rome_js_syntax::JsNumberLiteralExpression;
-use rome_js_syntax::JsNumberLiteralExpressionFields;
+use rome_js_syntax::{JsNumberLiteralExpressionFields, JsSyntaxNode};
 
-impl ToFormatElement for JsNumberLiteralExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsNumberLiteralExpressionFields { value_token } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsNumberLiteralExpression;
 
-        value_token.format(formatter)
+impl FormatNodeRule<JsNumberLiteralExpression> for FormatJsNumberLiteralExpression {
+    fn fmt_fields(
+        &self,
+        node: &JsNumberLiteralExpression,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        let JsNumberLiteralExpressionFields { value_token } = node.as_fields();
+        format_number_token(&value_token?).fmt(f)
+    }
+
+    fn needs_parentheses(&self, item: &JsNumberLiteralExpression) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for JsNumberLiteralExpression {
+    fn needs_parentheses_with_parent(&self, parent: &JsSyntaxNode) -> bool {
+        is_member_object(self.syntax(), parent)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::{assert_needs_parentheses, assert_not_needs_parentheses};
+    use rome_js_syntax::JsNumberLiteralExpression;
+
+    #[test]
+    fn needs_parentheses() {
+        assert_needs_parentheses!("(5).test", JsNumberLiteralExpression);
+        assert_needs_parentheses!("(5)[test]", JsNumberLiteralExpression);
+        assert_not_needs_parentheses!("test[5]", JsNumberLiteralExpression);
     }
 }

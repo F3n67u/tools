@@ -4,21 +4,115 @@
 //! from any error and produce an ast from any source code. If you don't want to account for
 //! optionals for everything, you can use ...
 
+use rome_text_size::TextRange;
+#[cfg(feature = "serde")]
+use serde::Serialize;
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::iter::FusedIterator;
 use std::marker::PhantomData;
-use text_size::TextRange;
+
+mod batch;
+mod mutation;
 
 use crate::syntax::{SyntaxSlot, SyntaxSlots};
-use crate::{Language, SyntaxList, SyntaxNode, SyntaxToken};
+use crate::{
+    Language, RawSyntaxKind, SyntaxKind, SyntaxList, SyntaxNode, SyntaxToken, SyntaxTriviaPiece,
+};
+pub use batch::*;
+pub use mutation::{AstNodeExt, AstNodeListExt, AstSeparatedListExt};
+
+/// Represents a set of [SyntaxKind] as a bitfield, with each bit representing
+/// whether the corresponding [RawSyntaxKind] value is contained in the set
+///
+/// This is similar to the `TokenSet` struct in `rome_js_parser`, with the
+/// bitfield here being twice as large as it needs to cover all nodes as well
+/// as all token kinds
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SyntaxKindSet<L: ?Sized + Language>([u128; 4], PhantomData<L>);
+
+impl<L> SyntaxKindSet<L>
+where
+    L: Language,
+{
+    /// Create a new [SyntaxKindSet] containing only the provided [SyntaxKind]
+    pub fn of(kind: L::Kind) -> Self {
+        Self::from_raw(kind.to_raw())
+    }
+
+    /// Create a new [SyntaxKindSet] containing only the provided [RawSyntaxKind]
+    ///
+    /// Unlike `SyntaxKindSet::of` this function can be evaluated in constants,
+    /// and will result in a compile-time error if the value overflows:
+    ///
+    /// ```compile_fail
+    /// # use rome_rowan::{SyntaxKindSet, RawSyntaxKind, raw_language::RawLanguage};
+    /// const EXAMPLE: SyntaxKindSet<RawLanguage> =
+    ///     SyntaxKindSet::<RawLanguage>::from_raw(RawSyntaxKind(512));
+    /// # println!("{EXAMPLE:?}"); // The constant must be used to be evaluated
+    /// ```
+    pub const fn from_raw(kind: RawSyntaxKind) -> Self {
+        let RawSyntaxKind(kind) = kind;
+
+        let index = kind as usize / u128::BITS as usize;
+        let shift = kind % u128::BITS as u16;
+        let mask = 1 << shift;
+
+        let mut bits = [0; 4];
+        bits[index] = mask;
+
+        Self(bits, PhantomData)
+    }
+
+    /// Returns the union of the two sets `self` and `other`
+    pub const fn union(self, other: Self) -> Self {
+        Self(
+            [
+                self.0[0] | other.0[0],
+                self.0[1] | other.0[1],
+                self.0[2] | other.0[2],
+                self.0[3] | other.0[3],
+            ],
+            PhantomData,
+        )
+    }
+
+    /// Returns true if `kind` is contained in this set
+    pub fn matches(self, kind: L::Kind) -> bool {
+        let RawSyntaxKind(kind) = kind.to_raw();
+
+        let index = kind as usize / u128::BITS as usize;
+        let shift = kind % u128::BITS as u16;
+        let mask = 1 << shift;
+
+        self.0[index] & mask != 0
+    }
+
+    /// Returns an iterator over all the [SyntaxKind] contained in this set
+    pub fn iter(self) -> impl Iterator<Item = L::Kind> {
+        self.0.into_iter().enumerate().flat_map(|(index, item)| {
+            let index = index as u16 * u128::BITS as u16;
+            (0..u128::BITS).filter_map(move |bit| {
+                if (item & (1 << bit)) != 0 {
+                    let raw = index + bit as u16;
+                    let raw = RawSyntaxKind(raw);
+                    Some(<L::Kind as SyntaxKind>::from_raw(raw))
+                } else {
+                    None
+                }
+            })
+        })
+    }
+}
 
 /// The main trait to go from untyped `SyntaxNode`  to a typed ast. The
 /// conversion itself has zero runtime cost: ast and syntax nodes have exactly
 /// the same representation: a pointer to the tree root and a pointer to the
 /// node itself.
-pub trait AstNode {
+pub trait AstNode: Clone {
     type Language: Language;
+
+    const KIND_SET: SyntaxKindSet<Self::Language>;
 
     /// Returns `true` if a node with the given kind can be cased to this AST node.
     fn can_cast(kind: <Self::Language as Language>::Kind) -> bool;
@@ -32,8 +126,96 @@ pub trait AstNode {
     where
         Self: Sized;
 
+    /// Takes a reference of a syntax node and tries to cast it to this AST node.
+    ///
+    /// Only creates a clone of the syntax node if casting the node is possible.
+    fn cast_ref(syntax: &SyntaxNode<Self::Language>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind()) {
+            Self::cast(syntax.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Tries to cast the passed syntax node to this AST node.
+    ///
+    /// # Returns
+    /// * [Ok] if the passed node can be cast into this [AstNode]
+    /// * [Err(syntax)](Err) If the node is of another kind.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rome_rowan::AstNode;
+    /// # use rome_rowan::raw_language::{LiteralExpression, RawLanguageKind, RawLanguageRoot, RawSyntaxTreeBuilder};
+    ///
+    /// let mut builder = RawSyntaxTreeBuilder::new();
+    ///
+    /// builder.start_node(RawLanguageKind::ROOT);
+    /// builder.start_node(RawLanguageKind::LITERAL_EXPRESSION);
+    /// builder.token(RawLanguageKind::STRING_TOKEN, "'abcd'");
+    /// builder.finish_node();
+    /// builder.finish_node();
+    ///
+    /// let root_syntax = builder.finish();
+    /// let root = RawLanguageRoot::cast(root_syntax.clone()).expect("Root to be a raw language root");
+    ///
+    /// // Returns `OK` because syntax is a `RawLanguageRoot`
+    /// assert_eq!(RawLanguageRoot::try_cast(root.syntax().clone()), Ok(root.clone()));
+    /// // Returns `Err` with the syntax node passed to `try_cast` because `root` isn't a `LiteralExpression`
+    /// assert_eq!(LiteralExpression::try_cast(root.syntax().clone()), Err(root_syntax));
+    /// ```
+    fn try_cast(syntax: SyntaxNode<Self::Language>) -> Result<Self, SyntaxNode<Self::Language>> {
+        if Self::can_cast(syntax.kind()) {
+            Ok(Self::cast(syntax).expect("Expected casted node because 'can_cast' returned true."))
+        } else {
+            Err(syntax)
+        }
+    }
+
+    /// Tries to cast the AST `node` into this node.
+    ///
+    /// # Returns
+    /// * [Ok] if the passed node can be cast into this [AstNode]
+    /// * [Err] if the node is of another kind
+    /// ```
+    /// # use rome_rowan::AstNode;
+    /// # use rome_rowan::raw_language::{LiteralExpression, RawLanguageKind, RawLanguageRoot, RawSyntaxTreeBuilder};
+    ///
+    /// let mut builder = RawSyntaxTreeBuilder::new();
+    ///
+    /// builder.start_node(RawLanguageKind::ROOT);
+    /// builder.start_node(RawLanguageKind::LITERAL_EXPRESSION);
+    /// builder.token(RawLanguageKind::STRING_TOKEN, "'abcd'");
+    /// builder.finish_node();
+    /// builder.finish_node();
+    ///
+    /// let root_syntax = builder.finish();
+    /// let root = RawLanguageRoot::cast(root_syntax.clone()).expect("Root to be a raw language root");
+    ///
+    /// // Returns `OK` because syntax is a `RawLanguageRoot`
+    /// assert_eq!(RawLanguageRoot::try_cast_node(root.clone()), Ok(root.clone()));
+    ///
+    /// // Returns `Err` with the node passed to `try_cast_node` because `root` isn't a `LiteralExpression`
+    /// assert_eq!(LiteralExpression::try_cast_node(root.clone()), Err(root.clone()));
+    /// ```
+    fn try_cast_node<T: AstNode<Language = Self::Language>>(node: T) -> Result<Self, T> {
+        if Self::can_cast(node.syntax().kind()) {
+            Ok(Self::cast(node.into_syntax())
+                .expect("Expected casted node because 'can_cast' returned true."))
+        } else {
+            Err(node)
+        }
+    }
+
     /// Returns the underlying syntax node.
     fn syntax(&self) -> &SyntaxNode<Self::Language>;
+
+    /// Returns the underlying syntax node.
+    fn into_syntax(self) -> SyntaxNode<Self::Language>;
 
     /// Cast this node to this AST node
     ///
@@ -68,6 +250,80 @@ pub trait AstNode {
     {
         Self::cast(self.syntax().clone_subtree()).unwrap()
     }
+
+    fn parent<T: AstNode<Language = Self::Language>>(&self) -> Option<T> {
+        self.syntax().parent().and_then(T::cast)
+    }
+
+    /// Return a new version of this node with the leading trivia of its first token replaced with `trivia`.
+    fn with_leading_trivia_pieces<I>(self, trivia: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = SyntaxTriviaPiece<Self::Language>>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        Self::cast(self.into_syntax().with_leading_trivia_pieces(trivia)?)
+    }
+
+    /// Return a new version of this node with the trailing trivia of its last token replaced with `trivia`.
+    fn with_trailing_trivia_pieces<I>(self, trivia: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = SyntaxTriviaPiece<Self::Language>>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        Self::cast(self.into_syntax().with_trailing_trivia_pieces(trivia)?)
+    }
+
+    // Return a new version of this node with `trivia` prepended to the leading trivia of the first token.
+    fn prepend_trivia_pieces<I>(self, trivia: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = SyntaxTriviaPiece<Self::Language>>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        Self::cast(self.into_syntax().prepend_trivia_pieces(trivia)?)
+    }
+
+    // Return a new version of this node with `trivia` appended to the trailing trivia of the last token.
+    fn append_trivia_pieces<I>(self, trivia: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = SyntaxTriviaPiece<Self::Language>>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        Self::cast(self.into_syntax().append_trivia_pieces(trivia)?)
+    }
+
+    /// Return a new version of this node without leading and trailing newlines and whitespaces.
+    fn trim(self) -> Option<Self> {
+        Self::cast(
+            self.into_syntax()
+                .trim_leading_trivia()?
+                .trim_trailing_trivia()?,
+        )
+    }
+
+    /// Return a new version of this node without leading newlines and whitespaces.
+    fn trim_start(self) -> Option<Self> {
+        Self::cast(self.into_syntax().trim_leading_trivia()?)
+    }
+
+    /// Return a new version of this node without trailing newlines and whitespaces.
+    fn trim_end(self) -> Option<Self> {
+        Self::cast(self.into_syntax().trim_trailing_trivia()?)
+    }
+}
+
+pub trait SyntaxNodeCast<L: Language> {
+    /// Tries to cast the current syntax node to specified AST node.
+    ///
+    /// # Returns
+    ///
+    /// [None] if the current node is of a different kind. [Some] otherwise.
+    fn cast<T: AstNode<Language = L>>(self) -> Option<T>;
+}
+
+impl<L: Language> SyntaxNodeCast<L> for SyntaxNode<L> {
+    fn cast<T: AstNode<Language = L>>(self) -> Option<T> {
+        T::cast(self)
+    }
 }
 
 /// List of homogenous nodes
@@ -77,6 +333,9 @@ pub trait AstNodeList {
 
     /// Returns the underlying syntax list
     fn syntax_list(&self) -> &SyntaxList<Self::Language>;
+
+    /// Returns the underlying syntax list
+    fn into_syntax_list(self) -> SyntaxList<Self::Language>;
 
     fn iter(&self) -> AstNodeListIterator<Self::Language, Self::Node> {
         AstNodeListIterator {
@@ -138,7 +397,7 @@ impl<L: Language, N: AstNode<Language = L>> Iterator for AstNodeListIterator<L, 
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.inner.len(), Some(self.inner.len()))
+        self.inner.size_hint()
     }
 
     fn last(self) -> Option<Self::Item>
@@ -157,19 +416,41 @@ impl<L: Language, N: AstNode<Language = L>> ExactSizeIterator for AstNodeListIte
 
 impl<L: Language, N: AstNode<Language = L>> FusedIterator for AstNodeListIterator<L, N> {}
 
-#[derive(Clone)]
-pub struct AstSeparatedElement<L: Language, N> {
-    node: SyntaxResult<N>,
-    trailing_separator: SyntaxResult<Option<SyntaxToken<L>>>,
+impl<L: Language, N: AstNode<Language = L>> DoubleEndedIterator for AstNodeListIterator<L, N> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        Some(Self::slot_to_node(&self.inner.next_back()?))
+    }
 }
 
-impl<L: Language, N: AstNode<Language = L> + Clone> AstSeparatedElement<L, N> {
-    pub fn node(&self) -> SyntaxResult<N> {
-        self.node.clone()
+#[derive(Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+pub struct AstSeparatedElement<L: Language, N> {
+    pub node: SyntaxResult<N>,
+    pub trailing_separator: SyntaxResult<Option<SyntaxToken<L>>>,
+}
+
+impl<L: Language, N: AstNode<Language = L>> AstSeparatedElement<L, N> {
+    pub fn node(&self) -> SyntaxResult<&N> {
+        match &self.node {
+            Ok(node) => Ok(node),
+            Err(err) => Err(*err),
+        }
     }
 
-    pub fn trailing_separator(&self) -> SyntaxResult<Option<SyntaxToken<L>>> {
-        self.trailing_separator.clone()
+    pub fn into_node(self) -> SyntaxResult<N> {
+        self.node
+    }
+
+    pub fn trailing_separator(&self) -> SyntaxResult<Option<&SyntaxToken<L>>> {
+        match &self.trailing_separator {
+            Ok(Some(sep)) => Ok(Some(sep)),
+            Ok(_) => Ok(None),
+            Err(err) => Err(*err),
+        }
+    }
+
+    pub fn into_trailing_separator(self) -> SyntaxResult<Option<SyntaxToken<L>>> {
+        self.trailing_separator
     }
 }
 
@@ -203,6 +484,9 @@ pub trait AstSeparatedList {
     /// Returns the underlying syntax list
     fn syntax_list(&self) -> &SyntaxList<Self::Language>;
 
+    /// Returns the underlying syntax list
+    fn into_syntax_list(self) -> SyntaxList<Self::Language>;
+
     /// Returns an iterator over all nodes with their trailing separator
     fn elements(&self) -> AstSeparatedListElementsIterator<Self::Language, Self::Node> {
         AstSeparatedListElementsIterator::new(self.syntax_list())
@@ -220,6 +504,16 @@ pub trait AstSeparatedList {
         AstSeparatedListNodesIterator {
             inner: self.elements(),
         }
+    }
+
+    /// Returns the first node
+    fn first(&self) -> Option<SyntaxResult<Self::Node>> {
+        self.iter().next()
+    }
+
+    /// Returns the last node
+    fn last(&self) -> Option<SyntaxResult<Self::Node>> {
+        self.iter().next_back()
     }
 
     #[inline]
@@ -253,6 +547,24 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let element = self.inner.next()?;
+
+            match element.trailing_separator {
+                Ok(Some(separator)) => return Some(Ok(separator)),
+                Err(missing) => return Some(Err(missing)),
+                _ => {}
+            }
+        }
+    }
+}
+
+impl<L, N> DoubleEndedIterator for AstSeparatorIterator<L, N>
+where
+    L: Language,
+    N: AstNode<Language = L>,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        loop {
+            let element = self.inner.next_back()?;
 
             match element.trailing_separator {
                 Ok(Some(separator)) => return Some(Ok(separator)),
@@ -314,6 +626,42 @@ impl<L: Language, N: AstNode<Language = L>> FusedIterator
 {
 }
 
+impl<L: Language, N: AstNode<Language = L>> DoubleEndedIterator
+    for AstSeparatedListElementsIterator<L, N>
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let first_slot = self.slots.next_back()?;
+
+        let separator = match first_slot {
+            SyntaxSlot::Node(node) => {
+                // if we fallback here, it means that we are at the end of the iterator
+                // which means that we don't have the optional separator and
+                // we have only a node, we bail early.
+                return Some(AstSeparatedElement {
+                    node: Ok(N::unwrap_cast(node)),
+                    trailing_separator: Ok(None),
+                });
+            }
+            SyntaxSlot::Token(token) => Ok(Some(token)),
+            SyntaxSlot::Empty => Ok(None),
+        };
+
+        let node = match self.slots.next_back() {
+            None => panic!("Malformed separated list, expected a node but found none"),
+            Some(SyntaxSlot::Empty) => Err(SyntaxError::MissingRequiredChild),
+            Some(SyntaxSlot::Token(token)) => panic!("Malformed list, node expected but found token {:?} instead. You must add missing markers for missing elements.", token),
+            Some(SyntaxSlot::Node(node)) => {
+                Ok(N::unwrap_cast(node))
+            }
+        };
+
+        Some(AstSeparatedElement {
+            node,
+            trailing_separator: separator,
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AstSeparatedListNodesIterator<L: Language, N> {
     inner: AstSeparatedListElementsIterator<L, N>,
@@ -328,10 +676,19 @@ impl<L: Language, N: AstNode<Language = L>> Iterator for AstSeparatedListNodesIt
 
 impl<L: Language, N: AstNode<Language = L>> FusedIterator for AstSeparatedListNodesIterator<L, N> {}
 
+impl<L: Language, N: AstNode<Language = L>> DoubleEndedIterator
+    for AstSeparatedListNodesIterator<L, N>
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back().map(|element| element.node)
+    }
+}
+
 /// Specific result used when navigating nodes using AST APIs
 pub type SyntaxResult<ResultType> = Result<ResultType, SyntaxError>;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 pub enum SyntaxError {
     /// Error thrown when a mandatory node is not found
     MissingRequiredChild,
@@ -469,27 +826,59 @@ mod tests {
         SeparatedExpressionList::new(node.into_list())
     }
 
-    fn assert_elements<'a>(
-        actual: impl Iterator<Item = AstSeparatedElement<RawLanguage, LiteralExpression>>,
+    type MappedElement = Vec<(Option<f64>, Option<String>)>;
+
+    fn map_elements<'a>(
+        actual: impl Iterator<Item = AstSeparatedElement<RawLanguage, LiteralExpression>>
+            + DoubleEndedIterator,
         expected: impl IntoIterator<Item = (Option<f64>, Option<&'a str>)>,
-    ) {
-        let actual = actual.map(|element| {
-            (
-                element.node.ok().map(|n| n.text().parse::<f64>().unwrap()),
-                element
-                    .trailing_separator
-                    .ok()
-                    .flatten()
-                    .map(|separator| separator.text().to_string()),
-            )
-        });
+        revert: bool,
+    ) -> (MappedElement, MappedElement) {
+        let actual: Vec<_> = if revert {
+            actual.rev().collect()
+        } else {
+            actual.collect()
+        };
+        let actual = actual
+            .into_iter()
+            .map(|element| {
+                (
+                    element.node.ok().map(|n| n.text().parse::<f64>().unwrap()),
+                    element
+                        .trailing_separator
+                        .ok()
+                        .flatten()
+                        .map(|separator| separator.text().to_string()),
+                )
+            })
+            .collect::<Vec<_>>();
 
         let expected = expected
             .into_iter()
             .map(|(value, separator)| (value, separator.map(|sep| sep.to_string())))
             .collect::<Vec<_>>();
 
-        assert_eq!(actual.collect::<Vec<_>>(), expected);
+        (actual, expected)
+    }
+
+    fn assert_elements<'a>(
+        actual: impl Iterator<Item = AstSeparatedElement<RawLanguage, LiteralExpression>>
+            + DoubleEndedIterator,
+        expected: impl IntoIterator<Item = (Option<f64>, Option<&'a str>)>,
+    ) {
+        let (actual, expected) = map_elements(actual, expected, false);
+
+        assert_eq!(actual, expected);
+    }
+
+    fn assert_rev_elements<'a>(
+        actual: impl Iterator<Item = AstSeparatedElement<RawLanguage, LiteralExpression>>
+            + DoubleEndedIterator,
+        expected: impl IntoIterator<Item = (Option<f64>, Option<&'a str>)>,
+    ) {
+        let (actual, expected) = map_elements(actual, expected, true);
+
+        assert_eq!(actual, expected);
     }
 
     fn assert_nodes(
@@ -514,6 +903,7 @@ mod tests {
 
         assert_nodes(list.iter(), vec![]);
         assert_elements(list.elements(), vec![]);
+        assert_rev_elements(list.elements(), vec![]);
         assert_eq!(list.trailing_separator(), None);
     }
 
@@ -540,7 +930,41 @@ mod tests {
                 (Some(4.), None),
             ],
         );
+        assert_rev_elements(
+            list.elements(),
+            vec![
+                (Some(4.), None),
+                (Some(3.), Some(",")),
+                (Some(2.), Some(",")),
+                (Some(1.), Some(",")),
+            ],
+        );
         assert_eq!(list.trailing_separator(), None);
+    }
+
+    #[test]
+    fn double_iterator_meet_at_middle() {
+        let list = build_list(vec![
+            (Some(1), Some(",")),
+            (Some(2), Some(",")),
+            (Some(3), Some(",")),
+            (Some(4), None),
+        ]);
+
+        let mut iter = list.elements();
+
+        let element = iter.next().unwrap();
+        assert_eq!(element.node().unwrap().text(), "1");
+        let element = iter.next_back().unwrap();
+        assert_eq!(element.node().unwrap().text(), "4");
+
+        let element = iter.next().unwrap();
+        assert_eq!(element.node().unwrap().text(), "2");
+        let element = iter.next_back().unwrap();
+        assert_eq!(element.node().unwrap().text(), "3");
+
+        assert!(iter.next().is_none());
+        assert!(iter.next_back().is_none());
     }
 
     #[test]
@@ -567,6 +991,15 @@ mod tests {
                 (Some(4.), Some(",")),
             ],
         );
+        assert_rev_elements(
+            list.elements(),
+            vec![
+                (Some(4.), Some(",")),
+                (Some(3.), Some(",")),
+                (Some(2.), Some(",")),
+                (Some(1.), Some(",")),
+            ],
+        );
         assert!(list.trailing_separator().is_some());
     }
 
@@ -582,6 +1015,11 @@ mod tests {
         assert_elements(
             list.elements(),
             vec![(Some(1.), Some(",")), (None, Some(","))],
+        );
+
+        assert_rev_elements(
+            list.elements(),
+            vec![(None, Some(",")), (Some(1.), Some(","))],
         );
     }
 
@@ -602,6 +1040,15 @@ mod tests {
                 (Some(3.), None),
             ],
         );
+
+        assert_rev_elements(
+            list.elements(),
+            vec![
+                // missing first element
+                (Some(3.), None),
+                (None, Some(",")),
+            ],
+        );
     }
 
     #[test]
@@ -617,5 +1064,61 @@ mod tests {
             list.elements(),
             vec![(Some(1.), None), (Some(2.), Some(","))],
         );
+
+        assert_rev_elements(
+            list.elements(),
+            vec![(Some(2.), Some(",")), (Some(1.), None)],
+        );
+    }
+
+    #[test]
+    fn ok_typed_parent_navigation() {
+        use crate::ast::SyntaxNodeCast;
+        use crate::raw_language::{RawLanguage, RawLanguageKind, RawSyntaxTreeBuilder};
+        use crate::*;
+
+        // This test creates the following tree
+        // Root
+        //     Condition
+        //         Let
+        // then selects the CONDITION node, cast it,
+        // then navigate upwards to its parent.
+        // All casts are fake and implemented below
+
+        let tree = RawSyntaxTreeBuilder::wrap_with_node(RawLanguageKind::ROOT, |builder| {
+            builder.start_node(RawLanguageKind::CONDITION);
+            builder.token(RawLanguageKind::LET_TOKEN, "let");
+            builder.finish_node();
+        });
+        let typed = tree.first_child().unwrap().cast::<RawRoot>().unwrap();
+        let _ = typed.parent::<RawRoot>().unwrap();
+
+        #[derive(Clone)]
+        struct RawRoot(SyntaxNode<RawLanguage>);
+        impl AstNode for RawRoot {
+            type Language = RawLanguage;
+
+            const KIND_SET: SyntaxKindSet<Self::Language> =
+                SyntaxKindSet::from_raw(RawSyntaxKind(RawLanguageKind::ROOT as u16));
+
+            fn can_cast(_: <Self::Language as Language>::Kind) -> bool {
+                todo!()
+            }
+
+            fn cast(syntax: SyntaxNode<Self::Language>) -> Option<Self>
+            where
+                Self: Sized,
+            {
+                Some(Self(syntax))
+            }
+
+            fn syntax(&self) -> &SyntaxNode<Self::Language> {
+                &self.0
+            }
+
+            fn into_syntax(self) -> SyntaxNode<Self::Language> {
+                todo!()
+            }
+        }
     }
 }

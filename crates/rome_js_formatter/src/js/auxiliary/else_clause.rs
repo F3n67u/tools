@@ -1,23 +1,33 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-
+use crate::utils::FormatStatementBody;
+use rome_formatter::write;
 use rome_js_syntax::JsElseClause;
 use rome_js_syntax::JsElseClauseFields;
 
-impl ToFormatElement for JsElseClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsElseClause;
+
+impl FormatNodeRule<JsElseClause> for FormatJsElseClause {
+    fn fmt_fields(&self, node: &JsElseClause, f: &mut JsFormatter) -> FormatResult<()> {
+        use rome_js_syntax::AnyJsStatement::*;
+
         let JsElseClauseFields {
             else_token,
             alternate,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            else_token.format(formatter)?,
-            space_token(),
-            alternate.format(formatter)?,
-        ])
+        let alternate = alternate?;
+
+        write!(
+            f,
+            [
+                else_token.format(),
+                group(
+                    &FormatStatementBody::new(&alternate)
+                        .with_forced_space(matches!(alternate, JsIfStatement(_)))
+                )
+            ]
+        )
     }
 }

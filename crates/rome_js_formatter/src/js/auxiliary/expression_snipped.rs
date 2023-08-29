@@ -1,20 +1,19 @@
-use crate::{
-    format_elements, formatter_traits::FormatTokenAndNode, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::JsExpressionSnipped;
 use rome_js_syntax::JsExpressionSnippedFields;
 
-impl ToFormatElement for JsExpressionSnipped {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsExpressionSnipped;
+
+impl FormatNodeRule<JsExpressionSnipped> for FormatJsExpressionSnipped {
+    fn fmt_fields(&self, node: &JsExpressionSnipped, f: &mut JsFormatter) -> FormatResult<()> {
         let JsExpressionSnippedFields {
             expression,
             eof_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            expression.format(formatter)?,
-            eof_token.format(formatter)?,
-        ])
+        write![f, [expression.format(), format_removed(&eof_token?),]]
     }
 }

@@ -1,13 +1,14 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::TsDefaultTypeClause;
+use crate::prelude::*;
 
-impl ToFormatElement for TsDefaultTypeClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let equals = self.eq_token().format(formatter)?;
-        let ty = self.ty().format(formatter)?;
-        Ok(format_elements![equals, space_token(), ty])
+use rome_formatter::write;
+use rome_js_syntax::{TsDefaultTypeClause, TsDefaultTypeClauseFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsDefaultTypeClause;
+
+impl FormatNodeRule<TsDefaultTypeClause> for FormatTsDefaultTypeClause {
+    fn fmt_fields(&self, node: &TsDefaultTypeClause, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsDefaultTypeClauseFields { eq_token, ty } = node.as_fields();
+        write![f, [eq_token.format(), space(), ty.format()]]
     }
 }

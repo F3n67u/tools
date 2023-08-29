@@ -1,9 +1,26 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsNonPrimitiveType;
+use crate::prelude::*;
 
-impl ToFormatElement for TsNonPrimitiveType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        self.object_token().format(formatter)
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxNode, TsNonPrimitiveType, TsNonPrimitiveTypeFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsNonPrimitiveType;
+
+impl FormatNodeRule<TsNonPrimitiveType> for FormatTsNonPrimitiveType {
+    fn fmt_fields(&self, node: &TsNonPrimitiveType, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsNonPrimitiveTypeFields { object_token } = node.as_fields();
+
+        write![f, [object_token.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &TsNonPrimitiveType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsNonPrimitiveType {
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

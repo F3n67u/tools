@@ -1,13 +1,16 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsAnyReturnType;
-impl ToFormatElement for TsAnyReturnType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::TsType(node) => node.to_format_element(formatter),
-            Self::TsPredicateReturnType(node) => node.to_format_element(formatter),
-            Self::TsAssertsReturnType(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyTsReturnType;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyTsReturnType;
+impl FormatRule<AnyTsReturnType> for FormatAnyTsReturnType {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyTsReturnType, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyTsReturnType::AnyTsType(node) => node.format().fmt(f),
+            AnyTsReturnType::TsPredicateReturnType(node) => node.format().fmt(f),
+            AnyTsReturnType::TsAssertsReturnType(node) => node.format().fmt(f),
         }
     }
 }

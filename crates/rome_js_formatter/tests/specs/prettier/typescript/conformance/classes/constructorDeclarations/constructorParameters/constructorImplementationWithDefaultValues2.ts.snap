@@ -1,11 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 125
-expression: constructorImplementationWithDefaultValues2.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: typescript/conformance/classes/constructorDeclarations/constructorParameters/constructorImplementationWithDefaultValues2.ts
 ---
+
 # Input
-```js
+
+```ts
 class C {
     constructor(x);
     constructor(public x: string = 1) {
@@ -28,8 +28,29 @@ class E<T extends Date> {
 }
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -7,10 +7,7 @@
+ 
+ class D<T, U> {
+   constructor(x: T, y: U);
+-  constructor(
+-    x: T = 1,
+-    public y: U = x,
+-  ) {
++  constructor(x: T = 1, public y: U = x) {
+     var z = x;
+   }
+ }
+```
+
 # Output
-```js
+
+```ts
 class C {
   constructor(x);
   constructor(public x: string = 1) {
@@ -50,7 +71,6 @@ class E<T extends Date> {
     var y = x;
   }
 }
-
 ```
 
 

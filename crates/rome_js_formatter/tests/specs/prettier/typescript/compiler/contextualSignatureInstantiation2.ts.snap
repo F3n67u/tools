@@ -1,11 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 123
-expression: contextualSignatureInstantiation2.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: typescript/compiler/contextualSignatureInstantiation2.ts
 ---
+
 # Input
-```js
+
+```ts
 // dot f g x = f(g(x))
 var dot: <T, S>(f: (_: T) => S) => <U>(g: (_: U) => T) => (_: U) => S;
 dot = <T, S>(f: (_: T) => S) => <U>(g: (_: U) => T): (r:U) => S => (x) => f(g(x));
@@ -13,15 +13,35 @@ var id: <T>(x:T) => T;
 var r23 = dot(id)(id);
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -2,7 +2,7 @@
+ var dot: <T, S>(f: (_: T) => S) => <U>(g: (_: U) => T) => (_: U) => S;
+ dot =
+   <T, S>(f: (_: T) => S) =>
+-  <U,>(g: (_: U) => T): ((r: U) => S) =>
++  <U>(g: (_: U) => T): ((r: U) => S) =>
+   (x) =>
+     f(g(x));
+ var id: <T>(x: T) => T;
+```
+
 # Output
-```js
+
+```ts
 // dot f g x = f(g(x))
 var dot: <T, S>(f: (_: T) => S) => <U>(g: (_: U) => T) => (_: U) => S;
 dot =
-  <T, S>(f: (_: T) => S) => <U>(g: (_: U) => T): (r: U) => S => (x) => f(g(x));
+  <T, S>(f: (_: T) => S) =>
+  <U>(g: (_: U) => T): ((r: U) => S) =>
+  (x) =>
+    f(g(x));
 var id: <T>(x: T) => T;
 var r23 = dot(id)(id);
-
 ```
 
 

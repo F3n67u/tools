@@ -3,24 +3,36 @@
 	"publisher": "rome",
 	"displayName": "Rome",
 	"description": "Rome LSP VS Code Extension",
-	"version": "0.4.2",
+	"version": "0.28.0",
 	"icon": "icon.png",
 	"activationEvents": [
 		"onLanguage:javascript",
+		"onLanguage:javascriptreact",
 		"onLanguage:typescript",
+		"onLanguage:typescriptreact",
+		"onLanguage:json",
 		"onCommand:rome.syntaxTree"
 	],
 	"main": "./out/main.js",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/rome/tools.git"
+		"url": "https://github.com/rome/tools.git",
+		"directory": "editors/vscode"
 	},
 	"bugs": {
 		"url": "https://github.com/rome/tools/issues"
 	},
 	"engines": {
-		"vscode": "^1.63.0",
-		"npm": "^8"
+		"vscode": "^1.70.0",
+		"npm": "^9"
+	},
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": "limited",
+			"restrictedConfigurations": [
+				"rome.lspBin"
+			]
+		}
 	},
 	"contributes": {
 		"languages": [
@@ -43,6 +55,11 @@
 				"command": "rome.syntaxTree",
 				"title": "Show Syntax Tree",
 				"category": "Rome"
+			},
+			{
+				"command": "rome.restartLspServer",
+				"title": "Restart LSP Server",
+				"category": "Rome"
 			}
 		],
 		"menus": {
@@ -57,98 +74,83 @@
 			"title": "Rome",
 			"type": "object",
 			"properties": {
+				"rome_lsp.trace.server": {
+					"type": "string",
+					"scope": "window",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"enumDescriptions": [
+						"No traces",
+						"Error only",
+						"Full log"
+					],
+					"default": "off",
+					"description": "Traces the communication between VS Code and the language server."
+				},
 				"rome.lspBin": {
 					"type": [
 						"string",
 						"null"
 					],
 					"default": null,
-					"markdownDescription": "The rome lsp server executable."
+					"markdownDescription": "The rome lsp server executable. If the path is relative, the workspace folder will be used as base path"
 				},
-				"rome.formatter.formatWithSyntaxErrors": {
-					"type": "boolean",
-					"default": false,
-					"markdownDescription": "**BETA**: allows the formatter to format code that contains syntax errors",
-					"examples": [
-						true,
-						false
-					]
-				},
-				"rome.formatter.lineWidth": {
-					"type": "number",
-					"default": 80,
-					"markdownDescription": "**BETA**: the max width of a single line, the code will have to fit in it",
-					"minimum": 40,
-					"maximum": 320
-				},
-				"rome.formatter.indentStyle": {
-					"type": "string",
-					"enum": [
-						"Tabs",
-						"Spaces"
+				"rome.rename": {
+					"type": [
+						"boolean",
+						"null"
 					],
-					"default": "Tabs",
-					"markdownEnumDescriptions": [
-						"**BETA**: applies **tabs** while formatting",
-						"**BETA**: applies **spaces** while formatting"
-					]
+					"default": null,
+					"markdownDescription": "Enable/Disable Rome handling renames in the workspace. (Experimental)"
 				},
-				"rome.formatter.spaceQuantity": {
-					"type": "number",
-					"default": 2,
-					"markdownDescription": "**BETA**: applied **only** when choosing **Spaces**, it's the number of spaces applied when printing.",
-					"minimum": 1,
-					"maximum": 12
-				},
-				"rome.formatter.quoteStyle": {
-					"type": "string",
-					"enum": [
-						"Double",
-						"Single"
-					],
-					"default": "Double",
-					"markdownEnumDescriptions": [
-						"**BETA**: applies **double** quotes while formatting",
-						"**BETA**: applies **single** quotes while formatting"
-					]
-				},
-				"rome.analysis.enableDiagnostics": {
+				"rome.requireConfiguration": {
 					"type": "boolean",
-					"default": false,
-					"markdownDescription": "Allows rome to compute and publish diagnostics"
-				},
-				"rome.analysis.enableCodeActions": {
-					"type": "boolean",
-					"default": false,
-					"markdownDescription": "Allows rome to compute and provide code actions"
+					"default": true,
+					"markdownDescription": "Require a Rome configuration file to enable syntax errors, formatting and linting. Requires Rome 12 or newer."
 				}
 			}
-		}
+		},
+		"jsonValidation": [
+			{
+				"fileMatch": "rome.json",
+				"url": "./configuration_schema.json"
+			}
+		]
 	},
 	"categories": [
-		"Formatters"
+		"Formatters",
+		"Linters"
 	],
 	"keywords": [
-		"Formatter"
+		"Formatter",
+		"Linter"
 	],
 	"license": "MIT",
-	"preview": true,
 	"scripts": {
 		"compile": "esbuild src/main.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node --target=node14",
 		"watch": "npm run compile -- --sourcemap --watch",
 		"package": "vsce package -o rome_lsp.vsix",
 		"build": "npm run compile -- --minify && npm run package",
-		"install-extension": "code --install-extension rome_lsp.vsix",
-		"format": "cargo run --bin rome format ./src/ ./scripts"
-	},
-	"dependencies": {
-		"vscode-languageclient": "^8.0.0-next.13"
+		"install-extension": "code --install-extension rome_lsp.vsix --force",
+		"format": "cargo rome-cli-dev format ./src/ ./scripts --write",
+		"check": "cargo rome-cli-dev check ./src/ ./scripts",
+		"check:apply": "cargo rome-cli-dev check ./src/ ./scripts --apply-unsafe",
+		"pack:dev": "npm run compile && npm run package && npm run install-extension",
+		"tsc": "tsc"
 	},
 	"devDependencies": {
-		"@types/node": "^16.11.9",
-		"@types/vscode": "^1.52.0",
-		"typescript": "^4.5.2",
-		"vsce": "^2.7.0",
-		"esbuild": "^0.14.27"
+		"@types/node": "^18.0.0",
+		"@types/resolve": "^1.20.2",
+		"@types/vscode": "^1.70.0",
+		"esbuild": "^0.14.47",
+		"typescript": "^4.8.2",
+		"vsce": "^2.11.0"
+	},
+	"dependencies": {
+		"resolve": "^1.22.1",
+		"vscode-languageclient": "^8.0.2"
 	}
 }

@@ -1,11 +1,12 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 119
-expression: issue-6259.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/multiparser-css/issue-6259.ts
 ---
+
 # Input
-```js
+
+```ts
 const yesFrame = (
     ...args: Interpolation<ThemedStyledProps<{}, Theme>>[]
 ) => css`
@@ -16,15 +17,35 @@ const yesFrame = (
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,7 +1,7 @@
+ const yesFrame = (
+   ...args: Interpolation<ThemedStyledProps<{}, Theme>>[]
+ ) => css`
+-  ${ChatRoot}[data-frame="yes"] & {
+-    ${css({}, ...args)}
+-  }
++    ${ChatRoot}[data-frame="yes"] & {
++        ${css({}, ...args)}
++    }
+ `;
+```
+
 # Output
-```js
-const yesFrame = (...args: Interpolation<ThemedStyledProps<{}, Theme>>[]) =>
-  css`
+
+```ts
+const yesFrame = (
+  ...args: Interpolation<ThemedStyledProps<{}, Theme>>[]
+) => css`
     ${ChatRoot}[data-frame="yes"] & {
         ${css({}, ...args)}
     }
 `;
-
 ```
 
 

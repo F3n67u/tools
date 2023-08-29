@@ -6,10 +6,22 @@ use quote::{format_ident, quote};
 use xtask::Result;
 
 pub fn generate_syntax_factory(ast: &AstSrc, language_kind: LanguageKind) -> Result<String> {
-    let (syntax_kind, factory_kind) = match language_kind {
-        LanguageKind::Js => (quote! { JsSyntaxKind }, quote! { JsSyntaxFactory }),
-        LanguageKind::Css => (quote! { CssSyntaxKind }, quote! {CssSyntaxFactory}),
-        LanguageKind::Json => (quote! { JsonSyntaxKind }, quote! {JsonSyntaxFactory}),
+    let (syntax_crate, syntax_kind, factory_kind) = match language_kind {
+        LanguageKind::Js => (
+            quote! { rome_js_syntax },
+            quote! { JsSyntaxKind },
+            quote! { JsSyntaxFactory },
+        ),
+        LanguageKind::Css => (
+            quote! { rome_css_syntax },
+            quote! { CssSyntaxKind },
+            quote! { CssSyntaxFactory },
+        ),
+        LanguageKind::Json => (
+            quote! { rome_json_syntax },
+            quote! { JsonSyntaxKind },
+            quote! { JsonSyntaxFactory },
+        ),
     };
     let normal_node_arms = ast.nodes.iter().map(|node| {
         let kind = format_ident!("{}", to_upper_snake_case(&node.name));
@@ -62,7 +74,7 @@ pub fn generate_syntax_factory(ast: &AstSrc, language_kind: LanguageKind) -> Res
                 // Additional unexpected elements
                 if current_element.is_some() {
                     return RawSyntaxNode::new(
-                        #kind.to_unknown(),
+                        #kind.to_bogus(),
                         children.into_iter().map(Some),
                     );
                 }
@@ -88,13 +100,13 @@ pub fn generate_syntax_factory(ast: &AstSrc, language_kind: LanguageKind) -> Res
         }
     });
 
-    let unknown_kinds = ast
-        .unknowns
+    let bogus_kinds = ast
+        .bogus
         .iter()
         .map(|node| format_ident!("{}", to_upper_snake_case(node)));
 
     let output = quote! {
-        use crate::{generated::nodes::*, #syntax_kind, #syntax_kind::*, T};
+        use #syntax_crate::{*, #syntax_kind, #syntax_kind::*, T};
         use rome_rowan::{AstNode, ParsedChildren, RawNodeSlots, RawSyntaxNode, SyntaxFactory, SyntaxKind};
 
         #[derive(Debug)]
@@ -110,7 +122,7 @@ pub fn generate_syntax_factory(ast: &AstSrc, language_kind: LanguageKind) -> Res
             ) -> RawSyntaxNode<Self::Kind>
             {
                 match kind {
-                    #(#unknown_kinds)|* => {
+                    #(#bogus_kinds)|* => {
                         RawSyntaxNode::new(kind, children.into_iter().map(Some))
                     },
                     #(#normal_node_arms),*,

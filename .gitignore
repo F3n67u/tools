@@ -11,8 +11,12 @@ Profile-*.json
 # Ignore third-party files
 **/node_modules
 **/dist
+**/build
 npm/cli-*
 .pnpm-debug.log
 
 # https://github.com/nnethercote/dhat-rs output file
 dhat-heap.json
+
+crates/rome_js_formatter/report.*
+crates/rome_json_formatter/report.*

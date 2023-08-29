@@ -1,12 +1,15 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyArrowFunctionParameters;
-impl ToFormatElement for JsAnyArrowFunctionParameters {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsParameters(node) => node.to_format_element(formatter),
-            Self::JsAnyBinding(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyJsArrowFunctionParameters;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsArrowFunctionParameters;
+impl FormatRule<AnyJsArrowFunctionParameters> for FormatAnyJsArrowFunctionParameters {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsArrowFunctionParameters, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsArrowFunctionParameters::JsParameters(node) => node.format().fmt(f),
+            AnyJsArrowFunctionParameters::AnyJsBinding(node) => node.format().fmt(f),
         }
     }
 }

@@ -3,7 +3,7 @@
 
 use std::{
     collections::HashMap,
-    fs, iter, mem,
+    fs, mem,
     path::{Path, PathBuf},
 };
 
@@ -67,6 +67,14 @@ pub fn generate_parser_tests(mode: Mode) -> Result<()> {
             if let crate::UpdateResult::Updated = update(&path, &test.text, &mode)? {
                 some_file_was_updated = true;
             }
+
+            if let Some(options) = &test.options {
+                let path = tests_dir.join(name).with_extension("options.json");
+
+                if let crate::UpdateResult::Updated = update(&path, options, &mode)? {
+                    some_file_was_updated = true;
+                }
+            }
         }
 
         Ok(some_file_was_updated)
@@ -97,12 +105,14 @@ struct Test {
     pub text: String,
     pub ok: bool,
     pub language: Language,
+    pub options: Option<String>,
 }
 
 #[derive(Debug)]
 enum Language {
     JavaScript,
     TypeScript,
+    TypeScriptDefinition,
     Jsx,
     Tsx,
 }
@@ -112,17 +122,21 @@ impl Language {
         match self {
             Language::JavaScript => "js",
             Language::TypeScript => "ts",
+            Language::TypeScriptDefinition => "d.ts",
             Language::Jsx => "jsx",
             Language::Tsx => "tsx",
         }
     }
 
-    fn from_extension(extension: &str) -> Option<Language> {
-        let language = match extension {
-            "js" => Language::JavaScript,
-            "ts" => Language::TypeScript,
-            "jsx" => Language::Jsx,
-            "tsx" => Language::Tsx,
+    fn from_file_name(name: &str) -> Option<Language> {
+        let language = match name.rsplit_once('.')? {
+            (_, "js") => Language::JavaScript,
+            (rest, "ts") => match rest.rsplit_once('.') {
+                Some((_, "d")) => Language::TypeScriptDefinition,
+                _ => Language::TypeScript,
+            },
+            (_, "jsx") => Language::Jsx,
+            (_, "tsx") => Language::Tsx,
             _ => {
                 return None;
             }
@@ -149,25 +163,32 @@ fn collect_tests(s: &str) -> Vec<Test> {
             _ => continue,
         };
 
-        let (language, name) = match suffix.split_once(' ') {
-            Some(("jsx", name)) => (Language::Jsx, name),
-            Some(("js", name)) => (Language::JavaScript, name),
-            Some(("ts", name)) => (Language::TypeScript, name),
-            Some(("tsx", name)) => (Language::Tsx, name),
-            Some((name, _)) => (Language::JavaScript, name),
-            _ => (Language::JavaScript, suffix),
+        let (language, suffix) = match suffix.split_once(' ') {
+            Some(("jsx", suffix)) => (Language::Jsx, suffix),
+            Some(("js", suffix)) => (Language::JavaScript, suffix),
+            Some(("ts", suffix)) => (Language::TypeScript, suffix),
+            Some(("d.ts", suffix)) => (Language::TypeScriptDefinition, suffix),
+            Some(("tsx", suffix)) => (Language::Tsx, suffix),
+            Some((_, suffix)) => (Language::JavaScript, suffix),
+            _ => panic!("wrong test configuration: {:?}", suffix),
+        };
+
+        let (name, options) = match suffix.split_once(' ') {
+            Some((name, options)) => (name, Some(options.to_string())),
+            _ => (suffix, None),
         };
 
         let text: String = comment_block[1..]
             .iter()
             .cloned()
-            .chain(iter::once(String::new()))
+            .chain([String::new()])
             .collect::<Vec<_>>()
             .join("\n");
 
         assert!(!text.trim().is_empty() && text.ends_with('\n'));
         res.push(Test {
             name: name.to_string(),
+            options,
             text,
             ok,
             language,
@@ -212,7 +233,7 @@ fn existing_tests(dir: &Path, ok: bool) -> Result<HashMap<String, (PathBuf, Test
         let language = path
             .extension()
             .and_then(|ext| ext.to_str())
-            .and_then(Language::from_extension);
+            .and_then(Language::from_file_name);
 
         if let Some(language) = language {
             let name = path
@@ -222,6 +243,7 @@ fn existing_tests(dir: &Path, ok: bool) -> Result<HashMap<String, (PathBuf, Test
             let text = fs::read_to_string(&path)?;
             let test = Test {
                 name: name.clone(),
+                options: None,
                 text,
                 ok,
                 language,

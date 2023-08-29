@@ -1,11 +1,12 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 125
-expression: empty-method-body.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/class/empty-method-body.ts
 ---
+
 # Input
-```js
+
+```ts
 // #9324
 
 class foo1 {
@@ -19,19 +20,40 @@ class Test {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,10 +1,10 @@
+ // #9324
+ 
+ class foo1 {
+-  bar /* bat */();
++  bar() /* bat */;
+ }
+ 
+ // #9367
+ class Test {
+-  foo /* 3 */(/* 2 */);
++  foo(/* 2 */) /* 3 */;
+ }
+```
+
 # Output
-```js
+
+```ts
 // #9324
 
 class foo1 {
-  bar() /* bat */ ;
+  bar() /* bat */;
 }
 
 // #9367
 class Test {
-  foo( /* 2 */ ) /* 3 */ ;
+  foo(/* 2 */) /* 3 */;
 }
-
 ```
 
 

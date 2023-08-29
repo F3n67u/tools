@@ -1,10 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 119
-expression: throw-expressions.js
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/babel-plugins/throw-expressions.js
 ---
+
 # Input
+
 ```js
 // https://babeljs.io/docs/en/babel-plugin-proposal-throw-expressions
 
@@ -14,7 +15,27 @@ function test(param = throw new Error('required!')) {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,5 +1,8 @@
+ // https://babeljs.io/docs/en/babel-plugin-proposal-throw-expressions
+ 
+-function test(param = throw new Error("required!")) {
+-  const test = param === true || throw new Error("Falsy!");
++function test(param = throw new Error('required!')
++)
++{
++  const test = param === true ||
++  throw new Error("Falsy!");
+ }
+```
+
 # Output
+
 ```js
 // https://babeljs.io/docs/en/babel-plugin-proposal-throw-expressions
 
@@ -24,41 +45,94 @@ function test(param = throw new Error('required!')
   const test = param === true ||
   throw new Error("Falsy!");
 }
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: expected an expression, or an assignment but instead found 'throw'
-  ┌─ throw-expressions.js:3:23
-  │
-3 │ function test(param = throw new Error('required!')) {
-  │                       ^^^^^ Expected an expression, or an assignment here
+throw-expressions.js:3:23 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `,` but instead found `Error`
-  ┌─ throw-expressions.js:3:33
-  │
-3 │ function test(param = throw new Error('required!')) {
-  │                                 ^^^^^ unexpected
+  × expected an expression, or an assignment but instead found 'throw'
+  
+    1 │ // https://babeljs.io/docs/en/babel-plugin-proposal-throw-expressions
+    2 │ 
+  > 3 │ function test(param = throw new Error('required!')) {
+      │                       ^^^^^
+    4 │   const test = param === true || throw new Error('Falsy!');
+    5 │ }
+  
+  i Expected an expression, or an assignment here
+  
+    1 │ // https://babeljs.io/docs/en/babel-plugin-proposal-throw-expressions
+    2 │ 
+  > 3 │ function test(param = throw new Error('required!')) {
+      │                       ^^^^^
+    4 │   const test = param === true || throw new Error('Falsy!');
+    5 │ }
+  
+throw-expressions.js:3:33 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `,` but instead found `(`
-  ┌─ throw-expressions.js:3:38
-  │
-3 │ function test(param = throw new Error('required!')) {
-  │                                      ^ unexpected
+  × expected `,` but instead found `Error`
+  
+    1 │ // https://babeljs.io/docs/en/babel-plugin-proposal-throw-expressions
+    2 │ 
+  > 3 │ function test(param = throw new Error('required!')) {
+      │                                 ^^^^^
+    4 │   const test = param === true || throw new Error('Falsy!');
+    5 │ }
+  
+  i Remove Error
+  
+throw-expressions.js:3:38 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a function body but instead found ')'
-  ┌─ throw-expressions.js:3:51
-  │
-3 │ function test(param = throw new Error('required!')) {
-  │                                                   ^ Expected a function body here
+  × expected `,` but instead found `(`
+  
+    1 │ // https://babeljs.io/docs/en/babel-plugin-proposal-throw-expressions
+    2 │ 
+  > 3 │ function test(param = throw new Error('required!')) {
+      │                                      ^
+    4 │   const test = param === true || throw new Error('Falsy!');
+    5 │ }
+  
+  i Remove (
+  
+throw-expressions.js:3:51 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected an expression but instead found 'throw'
-  ┌─ throw-expressions.js:4:34
-  │
-4 │   const test = param === true || throw new Error('Falsy!');
-  │                                  ^^^^^ Expected an expression here
+  × expected a function body but instead found ')'
+  
+    1 │ // https://babeljs.io/docs/en/babel-plugin-proposal-throw-expressions
+    2 │ 
+  > 3 │ function test(param = throw new Error('required!')) {
+      │                                                   ^
+    4 │   const test = param === true || throw new Error('Falsy!');
+    5 │ }
+  
+  i Expected a function body here
+  
+    1 │ // https://babeljs.io/docs/en/babel-plugin-proposal-throw-expressions
+    2 │ 
+  > 3 │ function test(param = throw new Error('required!')) {
+      │                                                   ^
+    4 │   const test = param === true || throw new Error('Falsy!');
+    5 │ }
+  
+throw-expressions.js:4:34 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an expression but instead found 'throw'
+  
+    3 │ function test(param = throw new Error('required!')) {
+  > 4 │   const test = param === true || throw new Error('Falsy!');
+      │                                  ^^^^^
+    5 │ }
+    6 │ 
+  
+  i Expected an expression here
+  
+    3 │ function test(param = throw new Error('required!')) {
+  > 4 │   const test = param === true || throw new Error('Falsy!');
+      │                                  ^^^^^
+    5 │ }
+    6 │ 
+  
 
 ```
 

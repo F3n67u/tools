@@ -1,7 +1,7 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
 #[allow(clippy::module_inception)]
-mod attribute;
-mod attribute_initializer_clause;
-mod expression_attribute_value;
-mod spread_attribute;
+pub(crate) mod attribute;
+pub(crate) mod attribute_initializer_clause;
+pub(crate) mod expression_attribute_value;
+pub(crate) mod spread_attribute;

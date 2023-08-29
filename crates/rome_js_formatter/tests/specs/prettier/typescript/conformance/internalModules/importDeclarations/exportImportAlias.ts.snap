@@ -1,9 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-expression: exportImportAlias.ts
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: typescript/conformance/internalModules/importDeclarations/exportImportAlias.ts
 ---
+
 # Input
-```js
+
+```ts
 // expect no errors here
 
 module A {
@@ -74,8 +76,41 @@ var p: { x: number; y: number; }
 var p: M.D.Point;
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -3,10 +3,7 @@
+ module A {
+   export var x = "hello world";
+   export class Point {
+-    constructor(
+-      public x: number,
+-      public y: number,
+-    ) {}
++    constructor(public x: number, public y: number) {}
+   }
+   export module B {
+     export interface Id {
+@@ -31,10 +28,7 @@
+ 
+   export module Y {
+     export class Point {
+-      constructor(
+-        public x: number,
+-        public y: number,
+-      ) {}
++      constructor(public x: number, public y: number) {}
+     }
+   }
+ }
+```
+
 # Output
-```js
+
+```ts
 // expect no errors here
 
 module A {
@@ -84,7 +119,9 @@ module A {
     constructor(public x: number, public y: number) {}
   }
   export module B {
-    export interface Id { name: string }
+    export interface Id {
+      name: string;
+    }
   }
 }
 
@@ -124,7 +161,10 @@ module K {
 
   export module L {
     export var y = 12;
-    export interface Point { x: number; y: number }
+    export interface Point {
+      x: number;
+      y: number;
+    }
   }
 }
 
@@ -137,7 +177,6 @@ var o = new M.D("Hello");
 
 var p: { x: number; y: number };
 var p: M.D.Point;
-
 ```
 
 

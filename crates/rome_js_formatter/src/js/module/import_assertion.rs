@@ -1,30 +1,52 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-
+use rome_formatter::write;
 use rome_js_syntax::JsImportAssertion;
 use rome_js_syntax::JsImportAssertionFields;
 
-impl ToFormatElement for JsImportAssertion {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsImportAssertion;
+
+impl FormatNodeRule<JsImportAssertion> for FormatJsImportAssertion {
+    fn fmt_fields(&self, node: &JsImportAssertion, f: &mut JsFormatter) -> FormatResult<()> {
         let JsImportAssertionFields {
-            assert_token,
             l_curly_token,
             assertions,
             r_curly_token,
-        } = self.as_fields();
+            assertion_kind,
+        } = node.as_fields();
 
-        let assert_token = assert_token.format(formatter)?;
-        let assertions = assertions.format(formatter)?;
+        write![
+            f,
+            [assertion_kind.format(), space(), l_curly_token.format()]
+        ]?;
 
-        let result = formatter.format_delimited_soft_block_spaces(
-            &l_curly_token?,
-            assertions,
-            &r_curly_token?,
-        )?;
+        if assertions.is_empty() {
+            let has_dangling = f.comments().has_dangling_comments(node.syntax());
+            write!(
+                f,
+                [
+                    has_dangling.then_some(space()),
+                    format_dangling_comments(node.syntax()).with_soft_block_indent(),
+                    has_dangling.then_some(space()),
+                ]
+            )?;
+        } else {
+            write!(
+                f,
+                [group(&soft_space_or_block_indent(&assertions.format()))]
+            )?;
+        }
 
-        Ok(format_elements![assert_token, space_token(), result])
+        write!(f, [r_curly_token.format()])
+    }
+
+    fn fmt_dangling_comments(
+        &self,
+        _: &JsImportAssertion,
+        _: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        // Handled as part of `fmt_fields`
+        Ok(())
     }
 }

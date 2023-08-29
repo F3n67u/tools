@@ -4,10 +4,11 @@ JsScript {
     statements: JsStatementList [
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@0..14 "let" [Comments("// SCRIPT"), Newline("\n")] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
-                        id: JsUnknownBinding {
+                        id: JsBogusBinding {
                             items: [
                                 IDENT@14..18 "let" [] [Whitespace(" ")],
                             ],
@@ -26,10 +27,11 @@ JsScript {
         },
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: CONST_KW@22..29 "const" [Newline("\n")] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
-                        id: JsUnknownBinding {
+                        id: JsBogusBinding {
                             items: [
                                 IDENT@29..33 "let" [] [Whitespace(" ")],
                             ],
@@ -56,10 +58,11 @@ JsScript {
   2: JS_STATEMENT_LIST@0..37
     0: JS_VARIABLE_STATEMENT@0..22
       0: JS_VARIABLE_DECLARATION@0..21
-        0: LET_KW@0..14 "let" [Comments("// SCRIPT"), Newline("\n")] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@14..21
+        0: (empty)
+        1: LET_KW@0..14 "let" [Comments("// SCRIPT"), Newline("\n")] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@14..21
           0: JS_VARIABLE_DECLARATOR@14..21
-            0: JS_UNKNOWN_BINDING@14..18
+            0: JS_BOGUS_BINDING@14..18
               0: IDENT@14..18 "let" [] [Whitespace(" ")]
             1: (empty)
             2: JS_INITIALIZER_CLAUSE@18..21
@@ -69,10 +72,11 @@ JsScript {
       1: SEMICOLON@21..22 ";" [] []
     1: JS_VARIABLE_STATEMENT@22..37
       0: JS_VARIABLE_DECLARATION@22..36
-        0: CONST_KW@22..29 "const" [Newline("\n")] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@29..36
+        0: (empty)
+        1: CONST_KW@22..29 "const" [Newline("\n")] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@29..36
           0: JS_VARIABLE_DECLARATOR@29..36
-            0: JS_UNKNOWN_BINDING@29..33
+            0: JS_BOGUS_BINDING@29..33
               0: IDENT@29..33 "let" [] [Whitespace(" ")]
             1: (empty)
             2: JS_INITIALIZER_CLAUSE@33..36
@@ -82,19 +86,31 @@ JsScript {
       1: SEMICOLON@36..37 ";" [] []
   3: EOF@37..38 "" [Newline("\n")] []
 --
-error[SyntaxError]: `let` cannot be declared as a variable name inside of a `let` declaration
-  ┌─ binding_identifier_invalid_script.js:2:5
-  │
-2 │ let let = 5;
-  │     ^^^ Rename the let identifier here
+binding_identifier_invalid_script.js:2:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × `let` cannot be declared as a variable name inside of a `let` declaration
+  
+    1 │ // SCRIPT
+  > 2 │ let let = 5;
+      │     ^^^
+    3 │ const let = 5;
+    4 │ 
+  
+  i Rename the let identifier here
+  
 --
-error[SyntaxError]: `let` cannot be declared as a variable name inside of a `const` declaration
-  ┌─ binding_identifier_invalid_script.js:3:7
-  │
-3 │ const let = 5;
-  │       ^^^ Rename the let identifier here
+binding_identifier_invalid_script.js:3:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × `let` cannot be declared as a variable name inside of a `const` declaration
+  
+    1 │ // SCRIPT
+    2 │ let let = 5;
+  > 3 │ const let = 5;
+      │       ^^^
+    4 │ 
+  
+  i Rename the let identifier here
+  
 --
 // SCRIPT
 let let = 5;

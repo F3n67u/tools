@@ -1,20 +1,30 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
-
-use rome_js_syntax::JsImportCallExpression;
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
 use rome_js_syntax::JsImportCallExpressionFields;
+use rome_js_syntax::{JsImportCallExpression, JsSyntaxKind, JsSyntaxNode};
 
-impl ToFormatElement for JsImportCallExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsImportCallExpression;
+
+impl FormatNodeRule<JsImportCallExpression> for FormatJsImportCallExpression {
+    fn fmt_fields(&self, node: &JsImportCallExpression, f: &mut JsFormatter) -> FormatResult<()> {
         let JsImportCallExpressionFields {
             import_token,
             arguments,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            import_token.format(formatter)?,
-            arguments.format(formatter)?,
-        ])
+        write![f, [import_token.format(), arguments.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &JsImportCallExpression) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for JsImportCallExpression {
+    fn needs_parentheses_with_parent(&self, parent: &JsSyntaxNode) -> bool {
+        matches!(parent.kind(), JsSyntaxKind::JS_NEW_EXPRESSION)
     }
 }

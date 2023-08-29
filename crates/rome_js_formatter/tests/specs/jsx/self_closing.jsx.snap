@@ -1,10 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/spec_test.rs
-assertion_line: 223
-expression: self_closing.jsx
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: jsx/self_closing.jsx
 ---
+
 # Input
+
+```jsx
 <Foo />;
 
 <Foo           />;
@@ -21,14 +22,27 @@ expression: self_closing.jsx
 
 />
 
+```
+
+
 =============================
+
 # Outputs
+
 ## Output 1
+
 -----
 Indent style: Tab
 Line width: 80
 Quote style: Double Quotes
+JSX quote style: Double Quotes
+Quote properties: As needed
+Trailing comma: All
+Semicolons: Always
+Arrow parentheses: Always
 -----
+
+```jsx
 <Foo />;
 
 <Foo />;
@@ -38,4 +52,6 @@ Quote style: Double Quotes
 <SourceTypeSelect />;
 
 <CodeEditor />;
+```
+
 

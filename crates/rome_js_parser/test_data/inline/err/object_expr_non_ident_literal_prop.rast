@@ -4,6 +4,7 @@ JsModule {
     items: JsModuleItemList [
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@0..4 "let" [] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -42,8 +43,9 @@ JsModule {
   2: JS_MODULE_ITEM_LIST@0..11
     0: JS_VARIABLE_STATEMENT@0..11
       0: JS_VARIABLE_DECLARATION@0..11
-        0: LET_KW@0..4 "let" [] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@4..11
+        0: (empty)
+        1: LET_KW@0..4 "let" [] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@4..11
           0: JS_VARIABLE_DECLARATOR@4..11
             0: JS_IDENTIFIER_BINDING@4..6
               0: IDENT@4..6 "d" [] [Whitespace(" ")]
@@ -62,11 +64,15 @@ JsModule {
       1: (empty)
   3: EOF@11..12 "" [Newline("\n")] []
 --
-error[SyntaxError]: expected `:` but instead found `}`
-  ┌─ object_expr_non_ident_literal_prop.js:1:11
-  │
-1 │ let d = {5}
-  │           ^ unexpected
+object_expr_non_ident_literal_prop.js:1:11 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `:` but instead found `}`
+  
+  > 1 │ let d = {5}
+      │           ^
+    2 │ 
+  
+  i Remove }
+  
 --
 let d = {5}

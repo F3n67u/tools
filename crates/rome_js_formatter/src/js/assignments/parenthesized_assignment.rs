@@ -1,22 +1,47 @@
-use crate::formatter_traits::FormatTokenAndNode;
-
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
-
+use crate::parentheses::NeedsParentheses;
+use crate::prelude::*;
+use rome_formatter::write;
 use rome_js_syntax::JsParenthesizedAssignment;
-use rome_js_syntax::JsParenthesizedAssignmentFields;
+use rome_js_syntax::{JsParenthesizedAssignmentFields, JsSyntaxNode};
 
-impl ToFormatElement for JsParenthesizedAssignment {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsParenthesizedAssignment;
+
+impl FormatNodeRule<JsParenthesizedAssignment> for FormatJsParenthesizedAssignment {
+    fn fmt_fields(
+        &self,
+        node: &JsParenthesizedAssignment,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
         let JsParenthesizedAssignmentFields {
             l_paren_token,
             assignment,
             r_paren_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            l_paren_token.format(formatter)?,
-            assignment.format(formatter)?,
-            r_paren_token.format(formatter)?,
-        ])
+        write![
+            f,
+            [
+                l_paren_token.format(),
+                assignment.format(),
+                r_paren_token.format(),
+            ]
+        ]
+    }
+
+    fn needs_parentheses(&self, item: &JsParenthesizedAssignment) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for JsParenthesizedAssignment {
+    #[inline]
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+
+    #[inline]
+    fn needs_parentheses_with_parent(&self, _: &JsSyntaxNode) -> bool {
+        false
     }
 }

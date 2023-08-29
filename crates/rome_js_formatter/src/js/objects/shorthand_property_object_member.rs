@@ -1,14 +1,20 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-
+use rome_formatter::write;
 use rome_js_syntax::JsShorthandPropertyObjectMember;
 use rome_js_syntax::JsShorthandPropertyObjectMemberFields;
 
-impl ToFormatElement for JsShorthandPropertyObjectMember {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsShorthandPropertyObjectMemberFields { name } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsShorthandPropertyObjectMember;
 
-        name.format(formatter)
+impl FormatNodeRule<JsShorthandPropertyObjectMember> for FormatJsShorthandPropertyObjectMember {
+    fn fmt_fields(
+        &self,
+        node: &JsShorthandPropertyObjectMember,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        let JsShorthandPropertyObjectMemberFields { name } = node.as_fields();
+
+        write![f, [name.format()]]
     }
 }

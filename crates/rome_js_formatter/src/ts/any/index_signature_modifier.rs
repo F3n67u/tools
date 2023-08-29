@@ -1,12 +1,15 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsAnyIndexSignatureModifier;
-impl ToFormatElement for TsAnyIndexSignatureModifier {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsStaticModifier(node) => node.to_format_element(formatter),
-            Self::TsReadonlyModifier(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyTsIndexSignatureModifier;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyTsIndexSignatureModifier;
+impl FormatRule<AnyTsIndexSignatureModifier> for FormatAnyTsIndexSignatureModifier {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyTsIndexSignatureModifier, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyTsIndexSignatureModifier::JsStaticModifier(node) => node.format().fmt(f),
+            AnyTsIndexSignatureModifier::TsReadonlyModifier(node) => node.format().fmt(f),
         }
     }
 }

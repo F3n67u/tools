@@ -1,20 +1,30 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
+use crate::utils::{FormatLiteralStringToken, StringLiteralParentKind};
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-
-use crate::utils::format_string_literal_token;
+use rome_formatter::write;
 use rome_js_syntax::JsLiteralMemberNameFields;
 use rome_js_syntax::{JsLiteralMemberName, JsSyntaxKind};
 
-impl ToFormatElement for JsLiteralMemberName {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsLiteralMemberNameFields { value } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsLiteralMemberName;
+
+impl FormatNodeRule<JsLiteralMemberName> for FormatJsLiteralMemberName {
+    fn fmt_fields(&self, node: &JsLiteralMemberName, f: &mut JsFormatter) -> FormatResult<()> {
+        let JsLiteralMemberNameFields { value } = node.as_fields();
 
         let value = value?;
 
         match value.kind() {
-            JsSyntaxKind::JS_STRING_LITERAL => Ok(format_string_literal_token(value, formatter)),
-            _ => value.format(formatter),
+            JsSyntaxKind::JS_STRING_LITERAL => {
+                write![
+                    f,
+                    [FormatLiteralStringToken::new(
+                        &value,
+                        StringLiteralParentKind::Member
+                    )]
+                ]
+            }
+            _ => write![f, [value.format()]],
         }
     }
 }

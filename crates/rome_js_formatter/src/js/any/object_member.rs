@@ -1,17 +1,20 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyObjectMember;
-impl ToFormatElement for JsAnyObjectMember {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsPropertyObjectMember(node) => node.to_format_element(formatter),
-            Self::JsMethodObjectMember(node) => node.to_format_element(formatter),
-            Self::JsGetterObjectMember(node) => node.to_format_element(formatter),
-            Self::JsSetterObjectMember(node) => node.to_format_element(formatter),
-            Self::JsShorthandPropertyObjectMember(node) => node.to_format_element(formatter),
-            Self::JsSpread(node) => node.to_format_element(formatter),
-            Self::JsUnknownMember(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyJsObjectMember;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsObjectMember;
+impl FormatRule<AnyJsObjectMember> for FormatAnyJsObjectMember {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsObjectMember, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsObjectMember::JsPropertyObjectMember(node) => node.format().fmt(f),
+            AnyJsObjectMember::JsMethodObjectMember(node) => node.format().fmt(f),
+            AnyJsObjectMember::JsGetterObjectMember(node) => node.format().fmt(f),
+            AnyJsObjectMember::JsSetterObjectMember(node) => node.format().fmt(f),
+            AnyJsObjectMember::JsShorthandPropertyObjectMember(node) => node.format().fmt(f),
+            AnyJsObjectMember::JsSpread(node) => node.format().fmt(f),
+            AnyJsObjectMember::JsBogusMember(node) => node.format().fmt(f),
         }
     }
 }

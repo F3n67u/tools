@@ -1,22 +1,43 @@
-use crate::{
-    formatter_traits::FormatTokenAndNode, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::parentheses::NeedsParentheses;
+use crate::prelude::*;
+use crate::utils::JsObjectPatternLike;
+use rome_formatter::write;
+use rome_js_syntax::{JsObjectAssignmentPattern, JsSyntaxNode};
 
-use rome_js_syntax::JsObjectAssignmentPattern;
-use rome_js_syntax::JsObjectAssignmentPatternFields;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsObjectAssignmentPattern;
 
-impl ToFormatElement for JsObjectAssignmentPattern {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsObjectAssignmentPatternFields {
-            l_curly_token,
-            properties,
-            r_curly_token,
-        } = self.as_fields();
+impl FormatNodeRule<JsObjectAssignmentPattern> for FormatJsObjectAssignmentPattern {
+    fn fmt_fields(
+        &self,
+        node: &JsObjectAssignmentPattern,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        write!(f, [JsObjectPatternLike::from(node.clone())])
+    }
 
-        formatter.format_delimited_soft_block_spaces(
-            &l_curly_token?,
-            properties.format(formatter)?,
-            &r_curly_token?,
-        )
+    fn needs_parentheses(&self, item: &JsObjectAssignmentPattern) -> bool {
+        item.needs_parentheses()
+    }
+
+    fn fmt_dangling_comments(
+        &self,
+        _: &JsObjectAssignmentPattern,
+        _: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        // Handled inside of `JsObjectPatternLike`
+        Ok(())
+    }
+}
+
+impl NeedsParentheses for JsObjectAssignmentPattern {
+    #[inline]
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+
+    #[inline]
+    fn needs_parentheses_with_parent(&self, _: &JsSyntaxNode) -> bool {
+        false
     }
 }

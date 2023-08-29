@@ -1,12 +1,33 @@
-use crate::{empty_element, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+use rome_formatter::write;
 
-use rome_js_syntax::JsEmptyStatement;
-use rome_js_syntax::JsEmptyStatementFields;
+use rome_js_syntax::{JsEmptyStatement, JsEmptyStatementFields, JsSyntaxKind};
+use rome_rowan::{AstNode, SyntaxNodeOptionExt};
 
-impl ToFormatElement for JsEmptyStatement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsEmptyStatementFields { semicolon_token } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsEmptyStatement;
 
-        Ok(formatter.format_replaced(&semicolon_token?, empty_element()))
+impl FormatNodeRule<JsEmptyStatement> for FormatJsEmptyStatement {
+    fn fmt_fields(&self, node: &JsEmptyStatement, f: &mut JsFormatter) -> FormatResult<()> {
+        let JsEmptyStatementFields { semicolon_token } = node.as_fields();
+        let parent_kind = node.syntax().parent().kind();
+
+        if matches!(
+            parent_kind,
+            Some(
+                JsSyntaxKind::JS_DO_WHILE_STATEMENT
+                    | JsSyntaxKind::JS_IF_STATEMENT
+                    | JsSyntaxKind::JS_ELSE_CLAUSE
+                    | JsSyntaxKind::JS_WHILE_STATEMENT
+                    | JsSyntaxKind::JS_FOR_IN_STATEMENT
+                    | JsSyntaxKind::JS_FOR_OF_STATEMENT
+                    | JsSyntaxKind::JS_FOR_STATEMENT
+                    | JsSyntaxKind::JS_WITH_STATEMENT
+            )
+        ) {
+            write!(f, [semicolon_token.format()])
+        } else {
+            write!(f, [format_removed(&semicolon_token?)])
+        }
     }
 }

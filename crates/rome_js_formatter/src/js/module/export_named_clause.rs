@@ -1,38 +1,60 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
+use crate::prelude::*;
+use rome_formatter::{format_args, write};
 
-use crate::utils::format_with_semicolon;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::utils::FormatStatementSemicolon;
 
 use rome_js_syntax::JsExportNamedClause;
 use rome_js_syntax::JsExportNamedClauseFields;
 
-impl ToFormatElement for JsExportNamedClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsExportNamedClause;
+
+impl FormatNodeRule<JsExportNamedClause> for FormatJsExportNamedClause {
+    fn fmt_fields(&self, node: &JsExportNamedClause, f: &mut JsFormatter) -> FormatResult<()> {
         let JsExportNamedClauseFields {
             type_token,
             l_curly_token,
             specifiers,
             r_curly_token,
             semicolon_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let type_token = type_token
-            .format_with_or_empty(formatter, |token| format_elements![token, space_token()])?;
+        if let Some(type_token) = &type_token {
+            write!(f, [type_token.format(), space()])?;
+        }
 
-        let specifiers = specifiers.format(formatter)?;
+        write!(f, [l_curly_token.format()])?;
 
-        let list = formatter.format_delimited_soft_block_spaces(
-            &l_curly_token?,
-            specifiers,
-            &r_curly_token?,
-        )?;
+        if specifiers.is_empty() {
+            write!(
+                f,
+                [format_dangling_comments(node.syntax()).with_block_indent()]
+            )?;
+        } else {
+            write!(
+                f,
+                [group(&format_args![
+                    soft_line_indent_or_space(&specifiers.format()),
+                    soft_line_break_or_space(),
+                ])]
+            )?;
+        }
 
-        format_with_semicolon(
-            formatter,
-            format_elements![type_token, list],
-            semicolon_token,
+        write!(
+            f,
+            [
+                r_curly_token.format(),
+                FormatStatementSemicolon::new(semicolon_token.as_ref())
+            ]
         )
+    }
+
+    fn fmt_dangling_comments(
+        &self,
+        _: &JsExportNamedClause,
+        _: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        // Handled as part of `fmt_fields`
+        Ok(())
     }
 }

@@ -1,3 +1,4 @@
-pub mod analysis;
-pub mod formatting;
-pub mod text_document;
+pub(crate) mod analysis;
+pub(crate) mod formatting;
+pub(crate) mod rename;
+pub(crate) mod text_document;

@@ -1,44 +1,57 @@
 mod element;
 mod node;
+mod rewriter;
 mod token;
 mod trivia;
 
-use std::fmt::Debug;
-
-pub use trivia::{
-    SyntaxTrivia, SyntaxTriviaPiece, SyntaxTriviaPieceComments, SyntaxTriviaPieceNewline,
-    SyntaxTriviaPieceSkipped, SyntaxTriviaPieceWhitespace, TriviaPiece, TriviaPieceKind,
-};
-
-pub use element::SyntaxElement;
+use crate::{AstNode, RawSyntaxKind};
+pub use element::{SyntaxElement, SyntaxElementKey};
+pub(crate) use node::SyntaxSlots;
 pub use node::{
-    Preorder, PreorderWithTokens, SyntaxElementChildren, SyntaxNode, SyntaxNodeChildren,
+    Preorder, PreorderWithTokens, SendNode, SyntaxElementChildren, SyntaxNode, SyntaxNodeChildren,
+    SyntaxNodeOptionExt, SyntaxSlot,
 };
-pub(crate) use node::{SyntaxSlot, SyntaxSlots};
-
-pub use token::SyntaxToken;
-
+pub use rewriter::{SyntaxRewriter, VisitNodeSignal};
 use std::fmt;
-
-use crate::RawSyntaxKind;
+use std::fmt::Debug;
+pub use token::SyntaxToken;
+pub use trivia::{
+    chain_trivia_pieces, trim_leading_trivia_pieces, trim_trailing_trivia_pieces,
+    ChainTriviaPiecesIterator, SyntaxTrivia, SyntaxTriviaPiece, SyntaxTriviaPieceComments,
+    SyntaxTriviaPieceNewline, SyntaxTriviaPieceSkipped, SyntaxTriviaPieceWhitespace,
+    SyntaxTriviaPiecesIterator, TriviaPiece, TriviaPieceKind,
+};
 
 /// Type tag for each node or token of a language
 pub trait SyntaxKind: fmt::Debug + PartialEq + Copy {
-    /// Returns `true` if this is an unknown node kind.
-    fn is_unknown(&self) -> bool;
+    const TOMBSTONE: Self;
+    const EOF: Self;
 
-    /// Converts this into to the best matching unknown node kind.
-    fn to_unknown(&self) -> Self;
+    /// Returns `true` if this is a kind of a bogus node.
+    fn is_bogus(&self) -> bool;
+
+    /// Converts this into to the best matching bogus node kind.
+    fn to_bogus(&self) -> Self;
 
     /// Converts this kind to a raw syntax kind.
     fn to_raw(&self) -> RawSyntaxKind;
 
     /// Creates a syntax kind from a raw kind.
     fn from_raw(raw: RawSyntaxKind) -> Self;
+
+    /// Returns `true` if this kind is for a root node.
+    fn is_root(&self) -> bool;
+
+    /// Returns `true` if this kind is a list node.
+    fn is_list(&self) -> bool;
+
+    /// Returns a string for keywords and punctuation tokens or `None` otherwise.
+    fn to_string(&self) -> Option<&'static str>;
 }
 
 pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Hash {
     type Kind: SyntaxKind;
+    type Root: AstNode<Language = Self> + Clone + Eq + fmt::Debug;
 }
 
 /// A list of `SyntaxNode`s and/or `SyntaxToken`s
@@ -78,6 +91,10 @@ impl<L: Language> SyntaxList<L> {
     pub fn node(&self) -> &SyntaxNode<L> {
         &self.list
     }
+
+    pub fn into_node(self) -> SyntaxNode<L> {
+        self.list
+    }
 }
 
 impl<L: Language> IntoIterator for &SyntaxList<L> {
@@ -100,7 +117,7 @@ impl<L: Language> IntoIterator for SyntaxList<L> {
 
 #[cfg(test)]
 mod tests {
-    use text_size::TextRange;
+    use rome_text_size::TextRange;
 
     use crate::raw_language::{RawLanguageKind, RawSyntaxTreeBuilder};
     use crate::syntax::TriviaPiece;
@@ -408,7 +425,7 @@ mod tests {
         // as NodeOrToken
 
         let eq_token = node
-            .descendants_with_tokens()
+            .descendants_with_tokens(Direction::Next)
             .find(|x| x.kind() == RawLanguageKind::EQUAL_TOKEN)
             .unwrap();
 

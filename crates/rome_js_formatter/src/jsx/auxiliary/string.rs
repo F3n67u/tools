@@ -1,9 +1,20 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+use crate::utils::{FormatLiteralStringToken, StringLiteralParentKind};
+
+use rome_formatter::write;
 use rome_js_syntax::JsxString;
 
-impl ToFormatElement for JsxString {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        self.value_token().format(formatter)
+#[derive(Debug, Clone, Default)]
+pub struct FormatJsxString;
+
+impl FormatNodeRule<JsxString> for FormatJsxString {
+    fn fmt_fields(&self, node: &JsxString, f: &mut JsFormatter) -> FormatResult<()> {
+        write![
+            f,
+            [FormatLiteralStringToken::new(
+                &node.value_token()?,
+                StringLiteralParentKind::Expression
+            )]
+        ]
     }
 }

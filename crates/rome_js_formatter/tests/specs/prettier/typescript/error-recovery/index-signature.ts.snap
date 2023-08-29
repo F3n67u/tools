@@ -1,9 +1,12 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-expression: index-signature.ts
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/error-recovery/index-signature.ts
 ---
+
 # Input
-```js
+
+```ts
 type A = { [key: string] };
 
 type TwoParams = {
@@ -26,8 +29,59 @@ type TooLongSingleParam = {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -2,30 +2,22 @@
+ 
+ type TwoParams = {
+   [a: string, b: string]: string;
+-};
++}
+ type ThreeParams = {
+   [a: string, b: string, c: string]: string;
+-};
++}
+ 
+ type TooLong = {
+-  [
+-    loooooooooooooooooooooooooong: string,
+-    looooooooooooooooooooooooooooooooooooooong: string,
+-  ]: string;
+-};
+-type TooLong81 = {
+-  [
+-    loooooooooooooooooooooooooong: string,
+-    loooooooooooooooooong: string,
+-  ]: string;
+-};
+-type TooLong80 = {
+-  [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string;
+-};
++  [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
++}
++type TooLong81 =
++  { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string;
++}
++type TooLong80 =
++  { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string;
++}
+ 
+ // note lack of trailing comma in the index signature
+ type TooLongSingleParam = {
+-  [
+-    looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: string
+-  ]: string;
++  [looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: string]: string;
+ };
+```
+
 # Output
-```js
+
+```ts
 type A = { [key: string] };
 
 type TwoParams = {
@@ -40,154 +94,361 @@ type ThreeParams = {
 type TooLong = {
   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
 }
-type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string;
+type TooLong81 =
+  { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string;
 }
-type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string;
+type TooLong80 =
+  { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string;
 }
 
 // note lack of trailing comma in the index signature
 type TooLongSingleParam = {
   [looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: string]: string;
 };
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: An index signature must have a type annotation
-  ┌─ index-signature.ts:1:26
-  │
-1 │ type A = { [key: string] };
-  │                          ^
+index-signature.ts:1:26 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `']'` but instead found `,`
-  ┌─ index-signature.ts:4:13
-  │
-4 │   [a: string, b: string]: string;
-  │             ^ unexpected
+  × An index signature must have a type annotation
+  
+  > 1 │ type A = { [key: string] };
+      │                          ^
+    2 │ 
+    3 │ type TwoParams = {
+  
+index-signature.ts:4:13 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: ';' expected'
-  ┌─ index-signature.ts:4:24
-  │
-4 │   [a: string, b: string]: string;
-  │                        ^ An explicit or implicit semicolon is expected here...
+  × expected `]` but instead found `,`
+  
+    3 │ type TwoParams = {
+  > 4 │   [a: string, b: string]: string;
+      │             ^
+    5 │ };
+    6 │ type ThreeParams = {
+  
+  i Remove ,
+  
+index-signature.ts:4:24 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a property, or a signature but instead found ';'
-  ┌─ index-signature.ts:4:33
-  │
-4 │   [a: string, b: string]: string;
-  │                                 ^ Expected a property, or a signature here
+  × ';' expected'
+  
+    3 │ type TwoParams = {
+  > 4 │   [a: string, b: string]: string;
+      │                        ^
+    5 │ };
+    6 │ type ThreeParams = {
+  
+  i An explicit or implicit semicolon is expected here...
+  
+index-signature.ts:4:33 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '}'
-  ┌─ index-signature.ts:5:1
-  │
-5 │ };
-  │ ^ Expected a statement here
+  × expected a property, or a signature but instead found ';'
+  
+    3 │ type TwoParams = {
+  > 4 │   [a: string, b: string]: string;
+      │                                 ^
+    5 │ };
+    6 │ type ThreeParams = {
+  
+  i Expected a property, or a signature here
+  
+    3 │ type TwoParams = {
+  > 4 │   [a: string, b: string]: string;
+      │                                 ^
+    5 │ };
+    6 │ type ThreeParams = {
+  
+index-signature.ts:5:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `']'` but instead found `,`
-  ┌─ index-signature.ts:7:13
-  │
-7 │   [a: string, b: string, c: string]: string;
-  │             ^ unexpected
+  × expected a statement but instead found '}'
+  
+    3 │ type TwoParams = {
+    4 │   [a: string, b: string]: string;
+  > 5 │ };
+      │ ^
+    6 │ type ThreeParams = {
+    7 │   [a: string, b: string, c: string]: string;
+  
+  i Expected a statement here
+  
+    3 │ type TwoParams = {
+    4 │   [a: string, b: string]: string;
+  > 5 │ };
+      │ ^
+    6 │ type ThreeParams = {
+    7 │   [a: string, b: string, c: string]: string;
+  
+index-signature.ts:7:13 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: ';' expected'
-  ┌─ index-signature.ts:7:35
-  │
-7 │   [a: string, b: string, c: string]: string;
-  │                                   ^ An explicit or implicit semicolon is expected here...
+  × expected `]` but instead found `,`
+  
+    5 │ };
+    6 │ type ThreeParams = {
+  > 7 │   [a: string, b: string, c: string]: string;
+      │             ^
+    8 │ };
+    9 │ 
+  
+  i Remove ,
+  
+index-signature.ts:7:35 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a property, or a signature but instead found ';'
-  ┌─ index-signature.ts:7:44
-  │
-7 │   [a: string, b: string, c: string]: string;
-  │                                            ^ Expected a property, or a signature here
+  × ';' expected'
+  
+    5 │ };
+    6 │ type ThreeParams = {
+  > 7 │   [a: string, b: string, c: string]: string;
+      │                                   ^
+    8 │ };
+    9 │ 
+  
+  i An explicit or implicit semicolon is expected here...
+  
+index-signature.ts:7:44 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '}'
-  ┌─ index-signature.ts:8:1
-  │
-8 │ };
-  │ ^ Expected a statement here
+  × expected a property, or a signature but instead found ';'
+  
+    5 │ };
+    6 │ type ThreeParams = {
+  > 7 │   [a: string, b: string, c: string]: string;
+      │                                            ^
+    8 │ };
+    9 │ 
+  
+  i Expected a property, or a signature here
+  
+    5 │ };
+    6 │ type ThreeParams = {
+  > 7 │   [a: string, b: string, c: string]: string;
+      │                                            ^
+    8 │ };
+    9 │ 
+  
+index-signature.ts:8:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `']'` but instead found `,`
-   ┌─ index-signature.ts:11:41
-   │
-11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
-   │                                         ^ unexpected
+  × expected a statement but instead found '}'
+  
+     6 │ type ThreeParams = {
+     7 │   [a: string, b: string, c: string]: string;
+   > 8 │ };
+       │ ^
+     9 │ 
+    10 │ type TooLong = {
+  
+  i Expected a statement here
+  
+     6 │ type ThreeParams = {
+     7 │   [a: string, b: string, c: string]: string;
+   > 8 │ };
+       │ ^
+     9 │ 
+    10 │ type TooLong = {
+  
+index-signature.ts:11:41 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: ';' expected'
-   ┌─ index-signature.ts:11:93
-   │
-11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
-   │                                                                                             ^ An explicit or implicit semicolon is expected here...
+  × expected `]` but instead found `,`
+  
+    10 │ type TooLong = {
+  > 11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+       │                                         ^
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  
+  i Remove ,
+  
+index-signature.ts:11:93 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a property, or a signature but instead found ';'
-   ┌─ index-signature.ts:11:102
-   │
-11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
-   │                                                                                                      ^ Expected a property, or a signature here
+  × ';' expected'
+  
+    10 │ type TooLong = {
+  > 11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+       │                                                                                             ^
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  
+  i An explicit or implicit semicolon is expected here...
+  
+index-signature.ts:11:102 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '}'
-   ┌─ index-signature.ts:12:1
-   │
-12 │ }
-   │ ^ Expected a statement here
+  × expected a property, or a signature but instead found ';'
+  
+    10 │ type TooLong = {
+  > 11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+       │                                                                                                      ^
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  
+  i Expected a property, or a signature here
+  
+    10 │ type TooLong = {
+  > 11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+       │                                                                                                      ^
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  
+index-signature.ts:12:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `']'` but instead found `,`
-   ┌─ index-signature.ts:13:58
-   │
-13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
-   │                                                          ^ unexpected
+  × expected a statement but instead found '}'
+  
+    10 │ type TooLong = {
+    11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+  > 12 │ }
+       │ ^
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+    14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+  
+  i Expected a statement here
+  
+    10 │ type TooLong = {
+    11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+  > 12 │ }
+       │ ^
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+    14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+  
+index-signature.ts:13:58 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: ';' expected'
-   ┌─ index-signature.ts:13:89
-   │
-13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
-   │                                                                                         ^ An explicit or implicit semicolon is expected here...
+  × expected `]` but instead found `,`
+  
+    11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+    12 │ }
+  > 13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+       │                                                          ^
+    14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+    15 │ 
+  
+  i Remove ,
+  
+index-signature.ts:13:89 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a property, or a signature but instead found ';'
-   ┌─ index-signature.ts:13:98
-   │
-13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
-   │                                                                                                  ^ Expected a property, or a signature here
+  × ';' expected'
+  
+    11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+    12 │ }
+  > 13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+       │                                                                                         ^
+    14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+    15 │ 
+  
+  i An explicit or implicit semicolon is expected here...
+  
+index-signature.ts:13:98 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '}'
-   ┌─ index-signature.ts:13:100
-   │
-13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
-   │                                                                                                    ^ Expected a statement here
+  × expected a property, or a signature but instead found ';'
+  
+    11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+    12 │ }
+  > 13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+       │                                                                                                  ^
+    14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+    15 │ 
+  
+  i Expected a property, or a signature here
+  
+    11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+    12 │ }
+  > 13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+       │                                                                                                  ^
+    14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+    15 │ 
+  
+index-signature.ts:13:100 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `']'` but instead found `,`
-   ┌─ index-signature.ts:14:58
-   │
-14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
-   │                                                          ^ unexpected
+  × expected a statement but instead found '}'
+  
+    11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+    12 │ }
+  > 13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+       │                                                                                                    ^
+    14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+    15 │ 
+  
+  i Expected a statement here
+  
+    11 │   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
+    12 │ }
+  > 13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+       │                                                                                                    ^
+    14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+    15 │ 
+  
+index-signature.ts:14:58 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: ';' expected'
-   ┌─ index-signature.ts:14:88
-   │
-14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
-   │                                                                                        ^ An explicit or implicit semicolon is expected here...
+  × expected `]` but instead found `,`
+  
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  > 14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+       │                                                          ^
+    15 │ 
+    16 │ // note lack of trailing comma in the index signature
+  
+  i Remove ,
+  
+index-signature.ts:14:88 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a property, or a signature but instead found ';'
-   ┌─ index-signature.ts:14:97
-   │
-14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
-   │                                                                                                 ^ Expected a property, or a signature here
+  × ';' expected'
+  
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  > 14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+       │                                                                                        ^
+    15 │ 
+    16 │ // note lack of trailing comma in the index signature
+  
+  i An explicit or implicit semicolon is expected here...
+  
+index-signature.ts:14:97 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '}'
-   ┌─ index-signature.ts:14:99
-   │
-14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
-   │                                                                                                   ^ Expected a statement here
+  × expected a property, or a signature but instead found ';'
+  
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  > 14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+       │                                                                                                 ^
+    15 │ 
+    16 │ // note lack of trailing comma in the index signature
+  
+  i Expected a property, or a signature here
+  
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  > 14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+       │                                                                                                 ^
+    15 │ 
+    16 │ // note lack of trailing comma in the index signature
+  
+index-signature.ts:14:99 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected a statement but instead found '}'
+  
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  > 14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+       │                                                                                                   ^
+    15 │ 
+    16 │ // note lack of trailing comma in the index signature
+  
+  i Expected a statement here
+  
+    12 │ }
+    13 │ type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string; }
+  > 14 │ type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string; }
+       │                                                                                                   ^
+    15 │ 
+    16 │ // note lack of trailing comma in the index signature
+  
 
 ```
 
 # Lines exceeding max width of 80 characters
 ```
    11:   [loooooooooooooooooooooooooong: string, looooooooooooooooooooooooooooooooooooooong: string]: string;
-   13: type TooLong81 = { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string;
-   15: type TooLong80 = { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string;
-   20:   [looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: string]: string;
+   14:   { [loooooooooooooooooooooooooong: string, loooooooooooooooooong: string]: string;
+   17:   { [loooooooooooooooooooooooooong: string, looooooooooooooooong: string]: string;
+   22:   [looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: string]: string;
 ```
+
 

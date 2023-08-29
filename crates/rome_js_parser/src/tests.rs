@@ -1,23 +1,24 @@
-use crate::{parse, parse_module, Parse, SourceType};
+use crate::test_utils::has_bogus_nodes_or_empty_slots;
+use crate::{parse, parse_module, test_utils::assert_errors_are_absent, JsParserOptions, Parse};
 use expect_test::expect_file;
-use rome_diagnostics::file::SimpleFile;
-use rome_diagnostics::termcolor::Buffer;
-use rome_diagnostics::{file::SimpleFiles, Emitter};
-use rome_js_syntax::{JsAnyRoot, JsSyntaxKind};
-use rome_js_syntax::{JsCallArguments, JsLogicalExpression, JsSyntaxNode, JsSyntaxToken};
-use rome_rowan::{AstNode, SyntaxKind, TextSize};
+use rome_console::fmt::{Formatter, Termcolor};
+use rome_console::markup;
+use rome_diagnostics::DiagnosticExt;
+use rome_diagnostics::PrintDiagnostic;
+use rome_js_syntax::{AnyJsRoot, JsFileSource, JsSyntaxKind};
+use rome_js_syntax::{JsCallArguments, JsLogicalExpression, JsSyntaxToken};
+use rome_rowan::{AstNode, Direction, TextSize};
+use std::fmt::Write;
 use std::panic::catch_unwind;
 use std::path::{Path, PathBuf};
 
 #[test]
 fn parser_smoke_test() {
     let src = r#"
-let
-// comment
-a;
+import "x" with { type: "json" }
 "#;
 
-    let module = parse(src, 0, SourceType::tsx());
+    let module = parse(src, JsFileSource::tsx(), JsParserOptions::default());
     assert_errors_are_absent(&module, Path::new("parser_smoke_test"));
 }
 
@@ -27,7 +28,7 @@ fn parser_missing_smoke_test() {
         console.log("Hello world";
     "#;
 
-    let module = parse_module(src, 0);
+    let module = parse_module(src, JsParserOptions::default());
 
     let arg_list = module
         .syntax()
@@ -47,18 +48,18 @@ fn parser_missing_smoke_test() {
     assert_eq!(closing, None);
 }
 
-fn try_parse(path: &str, text: &str) -> Parse<JsAnyRoot> {
+fn try_parse(path: &str, text: &str, options: JsParserOptions) -> Parse<AnyJsRoot> {
     let res = catch_unwind(|| {
         let path = Path::new(path);
         // Files containing a // SCRIPT comment are parsed as script and not as module
         // This is needed to test features that are restricted in strict mode.
         let source_type = if text.contains("// SCRIPT") {
-            SourceType::js_script()
+            JsFileSource::js_script()
         } else {
             path.try_into().unwrap()
         };
 
-        let parse = parse(text, 0, source_type);
+        let parse = parse(text, source_type, options);
 
         assert_eq!(
             parse.syntax().to_string(),
@@ -73,9 +74,13 @@ fn try_parse(path: &str, text: &str) -> Parse<JsAnyRoot> {
     res.unwrap()
 }
 
-fn try_parse_with_printed_ast(path: &str, text: &str) -> (Parse<JsAnyRoot>, String) {
+fn try_parse_with_printed_ast(
+    path: &str,
+    text: &str,
+    options: JsParserOptions,
+) -> (Parse<AnyJsRoot>, String) {
     catch_unwind(|| {
-        let parse = try_parse(path, text);
+        let parse = try_parse(path, text, options.clone());
         let formatted = format!("{:#?}", &parse.tree());
         (parse, formatted)
     })
@@ -84,7 +89,7 @@ fn try_parse_with_printed_ast(path: &str, text: &str) -> (Parse<JsAnyRoot>, Stri
         // unwind safe. That's why the same `ParseResult` can't be reused here.
         // This should be fine because this code is only executed for local tests. No checked-in
         // test should ever hit this line.
-        let re_parsed = try_parse(path, text);
+        let re_parsed = try_parse(path, text, options);
         panic!(
             "Printing the AST for `{}` panicked. That means it is malformed. Err: {:?}\n{:#?}",
             path,
@@ -99,7 +104,13 @@ fn run_and_expect_no_errors(path: &str, _: &str, _: &str, _: &str) {
     let path = PathBuf::from(path);
     let text = std::fs::read_to_string(&path).unwrap();
 
-    let (parse, ast) = try_parse_with_printed_ast(path.to_str().unwrap(), &text);
+    let options_path = path.with_extension("options.json");
+    let options: JsParserOptions = std::fs::read_to_string(options_path)
+        .ok()
+        .and_then(|options| serde_json::from_str(&options).ok())
+        .unwrap_or_default();
+
+    let (parse, ast) = try_parse_with_printed_ast(path.to_str().unwrap(), &text, options);
     assert_errors_are_absent(&parse, &path);
     let actual = format!("{}\n\n{:#?}", ast, parse.syntax());
 
@@ -112,26 +123,34 @@ fn run_and_expect_errors(path: &str, _: &str, _: &str, _: &str) {
     let path = PathBuf::from(path);
     let text = std::fs::read_to_string(&path).unwrap();
 
-    let (parse, ast) = try_parse_with_printed_ast(path.to_str().unwrap(), &text);
+    let options_path = path.with_extension("options.json");
+    let options: JsParserOptions = std::fs::read_to_string(options_path)
+        .ok()
+        .and_then(|options| serde_json::from_str(&options).ok())
+        .unwrap_or_default();
+
+    let (parse, ast) = try_parse_with_printed_ast(path.to_str().unwrap(), &text, options);
     assert_errors_are_present(&parse, &path);
-    let mut files = SimpleFiles::new();
-    files.add(
-        path.file_name().unwrap().to_string_lossy().to_string(),
-        text.to_string(),
-    );
     let mut actual = format!("{}\n\n{:#?}", ast, parse.syntax());
     for diag in parse.diagnostics() {
         let mut write = rome_diagnostics::termcolor::Buffer::no_color();
-        let mut emitter = Emitter::new(&files);
-        emitter
-            .emit_with_writer(diag, &mut write)
+        let error = diag
+            .clone()
+            .with_file_path(path.file_name().unwrap().to_string_lossy().to_string())
+            .with_file_source_code(text.to_string());
+        Formatter::new(&mut Termcolor(&mut write))
+            .write_markup(markup! {
+                {PrintDiagnostic::verbose(&error)}
+            })
             .expect("failed to emit diagnostic");
-        actual.push_str(&format!(
+        write!(
+            actual,
             "--\n{}",
             std::str::from_utf8(write.as_slice()).expect("non utf8 in error buffer")
-        ));
+        )
+        .unwrap();
     }
-    actual.push_str(&format!("--\n{}", text));
+    write!(actual, "--\n{}", text).unwrap();
 
     let path = path.with_extension("rast");
     expect_file![path].assert_eq(&actual)
@@ -146,7 +165,7 @@ mod parser {
     }
 }
 
-fn assert_errors_are_present(program: &Parse<JsAnyRoot>, path: &Path) {
+fn assert_errors_are_present(program: &Parse<AnyJsRoot>, path: &Path) {
     assert!(
         !program.diagnostics().is_empty(),
         "There should be errors in the file {:?}\nSyntax Tree: {:#?}",
@@ -155,39 +174,11 @@ fn assert_errors_are_present(program: &Parse<JsAnyRoot>, path: &Path) {
     );
 }
 
-// sometimes our parser emits unknown nodes without diagnostics;
-// this check makes sure that we don't signal that the tree has errors.
-fn has_unknown_nodes(node: &JsSyntaxNode) -> bool {
-    node.descendants()
-        .any(|descendant| descendant.kind().is_unknown())
-}
-
-fn assert_errors_are_absent<T>(program: &Parse<T>, path: &Path) {
-    let syntax = program.syntax();
-    if !program.has_errors() && !has_unknown_nodes(&syntax) {
-        return;
-    }
-
-    let file = SimpleFile::new(path.to_str().unwrap().to_string(), syntax.to_string());
-    let mut emitter = Emitter::new(&file);
-    let mut buffer = Buffer::no_color();
-
-    for diagnostic in program.diagnostics() {
-        emitter.emit_with_writer(diagnostic, &mut buffer).unwrap();
-    }
-
-    panic!("There should be no errors in the file {:?} but the following errors where present:\n{}\n\nParsed tree:\n{:#?}",
-        path.display(),
-        std::str::from_utf8(buffer.as_slice()).unwrap(),
-        &syntax
-	);
-}
-
 #[test]
 pub fn test_trivia_attached_to_tokens() {
     let text = "/**/let a = 1; // nice variable \n /*hey*/ let \t b = 2; // another nice variable";
-    let m = parse_module(text, 0);
-    let mut tokens = m.syntax().descendants_tokens();
+    let m = parse_module(text, JsParserOptions::default());
+    let mut tokens = m.syntax().descendants_tokens(Direction::Next);
 
     let is_let = |x: &JsSyntaxToken| x.text_trimmed() == "let";
     let first_let = tokens.find(is_let).unwrap();
@@ -220,7 +211,7 @@ pub fn test_trivia_attached_to_tokens() {
 #[test]
 pub fn jsroot_display_text_and_trimmed() {
     let code = " let a = 1; \n ";
-    let root = parse_module(code, 0);
+    let root = parse_module(code, JsParserOptions::default());
     let syntax = root.syntax();
 
     assert_eq!(format!("{}", syntax), code);
@@ -236,36 +227,36 @@ pub fn jsroot_display_text_and_trimmed() {
 pub fn jsroot_ranges() {
     //               0123456789A
     let code = " let a = 1;";
-    let root = parse_module(code, 0);
+    let root = parse_module(code, JsParserOptions::default());
     let syntax = root.syntax();
 
     let first_let = syntax.first_token().unwrap();
     let range = first_let.text_range();
-    assert_eq!(0usize, range.start().into());
-    assert_eq!(5usize, range.end().into());
+    assert_eq!(0usize, usize::from(range.start()));
+    assert_eq!(5usize, usize::from(range.end()));
 
     let range = first_let.text_trimmed_range();
-    assert_eq!(1usize, range.start().into());
-    assert_eq!(4usize, range.end().into());
+    assert_eq!(1usize, usize::from(range.start()));
+    assert_eq!(4usize, usize::from(range.end()));
 
     let eq = syntax
-        .descendants_tokens()
+        .descendants_tokens(Direction::Next)
         .find(|x| x.text_trimmed() == "=")
         .unwrap();
     let range = eq.text_range();
-    assert_eq!(7usize, range.start().into());
-    assert_eq!(9usize, range.end().into());
+    assert_eq!(7usize, usize::from(range.start()));
+    assert_eq!(9usize, usize::from(range.end()));
 
     let range = eq.text_trimmed_range();
-    assert_eq!(7usize, range.start().into());
-    assert_eq!(8usize, range.end().into());
+    assert_eq!(7usize, usize::from(range.start()));
+    assert_eq!(8usize, usize::from(range.end()));
 }
 
 #[test]
 pub fn node_range_must_be_correct() {
     //               0123456789A123456789B123456789
     let text = " function foo() { let a = 1; }";
-    let root = parse_module(text, 0);
+    let root = parse_module(text, JsParserOptions::default());
 
     let var_decl = root
         .syntax()
@@ -274,19 +265,19 @@ pub fn node_range_must_be_correct() {
         .unwrap();
 
     let range = var_decl.text_range();
-    assert_eq!(18usize, range.start().into());
-    assert_eq!(29usize, range.end().into());
+    assert_eq!(18usize, usize::from(range.start()));
+    assert_eq!(29usize, usize::from(range.end()));
 
     let range = var_decl.text_trimmed_range();
-    assert_eq!(18usize, range.start().into());
-    assert_eq!(28usize, range.end().into());
+    assert_eq!(18usize, usize::from(range.start()));
+    assert_eq!(28usize, usize::from(range.end()));
 }
 
 #[test]
 pub fn last_trivia_must_be_appended_to_eof() {
     //               0123456789A123456789B123456789CC
     let text = " function foo() { let a = 1; }\n";
-    let root = parse_module(text, 0);
+    let root = parse_module(text, JsParserOptions::default());
     let syntax = root.syntax();
 
     let range = syntax.text_range();
@@ -301,7 +292,7 @@ pub fn last_trivia_must_be_appended_to_eof() {
 pub fn just_trivia_must_be_appended_to_eof() {
     //               0123456789A123456789B123456789C123
     let text = "// just trivia... nothing else....";
-    let root = parse_module(text, 0);
+    let root = parse_module(text, JsParserOptions::default());
     let syntax = root.syntax();
 
     let range = syntax.text_range();
@@ -315,7 +306,7 @@ pub fn just_trivia_must_be_appended_to_eof() {
 #[test]
 pub fn node_contains_comments() {
     let text = "true && true // comment";
-    let root = parse_module(text, 0);
+    let root = parse_module(text, JsParserOptions::default());
     let syntax = root.syntax();
 
     assert!(syntax.has_comments_descendants());
@@ -324,7 +315,7 @@ pub fn node_contains_comments() {
 #[test]
 fn parser_regexp_after_operator() {
     fn assert_no_errors(src: &str) {
-        let module = parse(src, 0, SourceType::js_script());
+        let module = parse(src, JsFileSource::js_script(), JsParserOptions::default());
         assert_errors_are_absent(&module, Path::new("parser_regexp_after_operator"));
     }
     assert_no_errors(r#"a=/a/"#);
@@ -337,7 +328,7 @@ fn parser_regexp_after_operator() {
 #[test]
 pub fn node_contains_trailing_comments() {
     let text = "true && (3 - 2 == 0) // comment";
-    let root = parse_module(text, 0);
+    let root = parse_module(text, JsParserOptions::default());
     let syntax = root.syntax();
     let node = syntax
         .descendants()
@@ -356,7 +347,7 @@ pub fn node_contains_leading_comments() {
     let text = r"true &&
 // comment
 (3 - 2 == 0)";
-    let root = parse_module(text, 0);
+    let root = parse_module(text, JsParserOptions::default());
     let syntax = root.syntax();
     let node = syntax
         .descendants()
@@ -375,7 +366,7 @@ pub fn node_has_comments() {
     let text = r"true &&
 // comment
 (3 - 2 == 0)";
-    let root = parse_module(text, 0);
+    let root = parse_module(text, JsParserOptions::default());
     let syntax = root.syntax();
     let node = syntax
         .descendants()
@@ -386,4 +377,53 @@ pub fn node_has_comments() {
     let right = logical_expression.right().unwrap();
 
     assert!(right.syntax().has_comments_direct());
+}
+
+#[test]
+fn diagnostics_print_correctly() {
+    let text = r"const a";
+
+    let root = parse_module(text, JsParserOptions::default());
+    for diagnostic in root.diagnostics() {
+        let mut write = rome_diagnostics::termcolor::Buffer::no_color();
+        let error = diagnostic
+            .clone()
+            .with_file_path("example.js")
+            .with_file_source_code(text.to_string());
+
+        Formatter::new(&mut Termcolor(&mut write))
+            .write_markup(markup! {
+                {PrintDiagnostic::verbose(&error)}
+            })
+            .expect("failed to emit diagnostic");
+
+        eprintln!(
+            "{}",
+            std::str::from_utf8(write.as_slice()).expect("non utf8 in error buffer")
+        );
+    }
+}
+
+#[ignore]
+#[test]
+pub fn quick_test() {
+    let code = r#"
+
+
+        (@dec a) => {}
+    "#;
+    let root = parse(
+        code,
+        JsFileSource::ts(),
+        JsParserOptions::default().with_parse_class_parameter_decorators(),
+    );
+    let syntax = root.syntax();
+    dbg!(&syntax, root.diagnostics(), root.has_errors());
+
+    if has_bogus_nodes_or_empty_slots(&syntax) {
+        panic!(
+            "modified tree has bogus nodes or empty slots:\n{syntax:#?} \n\n {}",
+            syntax
+        )
+    }
 }

@@ -1,8 +1,4 @@
-use std::{
-    fmt,
-    ops::{AddAssign, Deref},
-};
-use text_size::TextSize;
+use std::{fmt, ops::Deref};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum NodeOrToken<N, T> {
@@ -43,8 +39,8 @@ impl<N, T> NodeOrToken<N, T> {
 impl<N: Deref, T: Deref> NodeOrToken<N, T> {
     pub(crate) fn as_deref(&self) -> NodeOrToken<&N::Target, &T::Target> {
         match self {
-            NodeOrToken::Node(node) => NodeOrToken::Node(&*node),
-            NodeOrToken::Token(token) => NodeOrToken::Token(&*token),
+            NodeOrToken::Node(node) => NodeOrToken::Node(&**node),
+            NodeOrToken::Token(token) => NodeOrToken::Token(&**token),
         }
     }
 }
@@ -149,32 +145,13 @@ impl<T> Iterator for TokenAtOffset<T> {
 
 impl<T> ExactSizeIterator for TokenAtOffset<T> {}
 
-macro_rules! _static_assert {
+#[cfg(target_pointer_width = "64")]
+#[macro_export]
+macro_rules! static_assert {
     ($expr:expr) => {
         const _: i32 = 0 / $expr as i32;
     };
 }
 
-pub(crate) use _static_assert as static_assert;
-
-#[derive(Copy, Clone, Debug)]
-pub(crate) enum Delta<T> {
-    Add(T),
-    Sub(T),
-}
-
-// This won't be coherent :-(
-// impl<T: AddAssign + SubAssign> AddAssign<Delta<T>> for T
-macro_rules! impls {
-    ($($ty:ident)*) => {$(
-        impl AddAssign<Delta<$ty>> for $ty {
-            fn add_assign(&mut self, rhs: Delta<$ty>) {
-                match rhs {
-                    Delta::Add(amt) => *self += amt,
-                    Delta::Sub(amt) => *self -= amt,
-                }
-            }
-        }
-    )*};
-}
-impls!(u32 TextSize);
+#[cfg(target_pointer_width = "64")]
+pub use static_assert;

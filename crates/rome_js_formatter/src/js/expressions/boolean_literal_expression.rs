@@ -1,14 +1,36 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-
-use rome_js_syntax::JsBooleanLiteralExpression;
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
 use rome_js_syntax::JsBooleanLiteralExpressionFields;
+use rome_js_syntax::{JsBooleanLiteralExpression, JsSyntaxNode};
 
-impl ToFormatElement for JsBooleanLiteralExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsBooleanLiteralExpressionFields { value_token } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsBooleanLiteralExpression;
 
-        value_token.format(formatter)
+impl FormatNodeRule<JsBooleanLiteralExpression> for FormatJsBooleanLiteralExpression {
+    fn fmt_fields(
+        &self,
+        node: &JsBooleanLiteralExpression,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        let JsBooleanLiteralExpressionFields { value_token } = node.as_fields();
+
+        write![f, [value_token.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &JsBooleanLiteralExpression) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for JsBooleanLiteralExpression {
+    #[inline(always)]
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+    #[inline(always)]
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

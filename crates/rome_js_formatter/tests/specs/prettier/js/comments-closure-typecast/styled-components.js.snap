@@ -1,8 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-expression: styled-components.js
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/comments-closure-typecast/styled-components.js
 ---
+
 # Input
+
 ```js
 const OverlapWrapper =
   /** @type {import('styled-components').ThemedStyledFunction<'div',null,{overlap: boolean}>} */
@@ -17,11 +20,37 @@ top: ${p => p.overlap === 'next' && 0};
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,10 +1,10 @@
+ const OverlapWrapper =
+   /** @type {import('styled-components').ThemedStyledFunction<'div',null,{overlap: boolean}>} */
+   (styled.div)`
+-    position: relative;
++position:relative;
+     > {
+-      position: absolute;
+-      bottom: ${(p) => p.overlap === "previous" && 0};
+-      top: ${(p) => p.overlap === "next" && 0};
+-    }
+-  `;
++  position: absolute;
++  bottom: ${(p) => p.overlap === "previous" && 0};
++top: ${(p) => p.overlap === "next" && 0};
++}
++`;
+```
+
 # Output
+
 ```js
 const OverlapWrapper =
-/** @type {import('styled-components').ThemedStyledFunction<'div',null,{overlap: boolean}>} */
-(styled.div)`
+  /** @type {import('styled-components').ThemedStyledFunction<'div',null,{overlap: boolean}>} */
+  (styled.div)`
 position:relative;
     > {
   position: absolute;
@@ -29,11 +58,11 @@ position:relative;
 top: ${(p) => p.overlap === "next" && 0};
 }
 `;
-
 ```
 
 # Lines exceeding max width of 80 characters
 ```
-    2: /** @type {import('styled-components').ThemedStyledFunction<'div',null,{overlap: boolean}>} */
+    2:   /** @type {import('styled-components').ThemedStyledFunction<'div',null,{overlap: boolean}>} */
 ```
+
 

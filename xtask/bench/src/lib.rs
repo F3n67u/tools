@@ -1,26 +1,33 @@
 mod features;
-mod utils;
+mod language;
+mod test_case;
 
-use rome_js_parser::{parse, SourceType};
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
-use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 
+use criterion::{BatchSize, BenchmarkId};
+use rome_rowan::NodeCache;
+
+pub use crate::features::analyzer::benchmark_analyze_lib;
+use crate::features::analyzer::AnalyzerMeasurement;
 pub use crate::features::formatter::benchmark_format_lib;
 use crate::features::formatter::{run_format, FormatterMeasurement};
 pub use crate::features::parser::benchmark_parse_lib;
-use crate::features::parser::{run_parse, ParseMeasurement};
-pub use utils::get_code;
+use crate::features::parser::ParseMeasurement;
+use crate::language::Parse;
+use crate::test_case::TestCase;
 
 /// What feature to benchmark
+#[derive(Eq, PartialEq)]
 pub enum FeatureToBenchmark {
     /// benchmark of the parser
     Parser,
     /// benchmark of the formatter
     Formatter,
+    /// benchmark of the analyzer
+    Analyzer,
 }
 
 impl FromStr for FeatureToBenchmark {
@@ -30,6 +37,7 @@ impl FromStr for FeatureToBenchmark {
         match s {
             "parser" => Ok(Self::Parser),
             "formatter" => Ok(Self::Formatter),
+            "analyzer" => Ok(Self::Analyzer),
             _ => Err(pico_args::Error::OptionWithoutAValue("feature")),
         }
     }
@@ -40,6 +48,7 @@ impl Display for FeatureToBenchmark {
         match self {
             FeatureToBenchmark::Parser => write!(f, "parser"),
             FeatureToBenchmark::Formatter => write!(f, "formatter"),
+            FeatureToBenchmark::Analyzer => write!(f, "analyzer"),
         }
     }
 }
@@ -49,6 +58,7 @@ impl Display for FeatureToBenchmark {
 pub enum BenchmarkSummary {
     Parser(ParseMeasurement),
     Formatter(FormatterMeasurement),
+    Analyzer(AnalyzerMeasurement),
 }
 
 impl BenchmarkSummary {
@@ -56,6 +66,7 @@ impl BenchmarkSummary {
         match self {
             BenchmarkSummary::Parser(result) => result.summary(),
             BenchmarkSummary::Formatter(result) => result.summary(),
+            BenchmarkSummary::Analyzer(result) => result.summary(),
         }
     }
 }
@@ -65,6 +76,7 @@ impl Display for BenchmarkSummary {
         match self {
             BenchmarkSummary::Parser(result) => std::fmt::Display::fmt(&result, f),
             BenchmarkSummary::Formatter(result) => std::fmt::Display::fmt(&result, f),
+            BenchmarkSummary::Analyzer(result) => std::fmt::Display::fmt(&result, f),
         }
     }
 }
@@ -85,22 +97,28 @@ pub fn run(args: RunArgs) {
     let regex = regex::Regex::new(args.filter.as_str()).unwrap();
 
     let mut all_suites = HashMap::new();
-    all_suites.insert("js", include_str!("libs-js.txt"));
-    all_suites.insert("ts", include_str!("libs-ts.txt"));
+    if args.feature == FeatureToBenchmark::Analyzer {
+        all_suites.insert("js", include_str!("analyzer-libs-js.txt"));
+        all_suites.insert("ts", include_str!("analyzer-libs-ts.txt"));
+    } else {
+        all_suites.insert("js", include_str!("libs-js.txt"));
+        all_suites.insert("ts", include_str!("libs-ts.txt"));
+        all_suites.insert("json", include_str!("libs-json.txt"));
+    }
 
     let mut libs = vec![];
     let suites_to_run = args.suites.split(',');
     for suite in suites_to_run {
         match suite {
             "*" => {
-                libs.extend(all_suites["js"].lines());
-                libs.extend(all_suites["ts"].lines());
+                libs.extend(all_suites.values().flat_map(|suite| suite.lines()));
             }
-            "js" => libs.extend(all_suites["js"].lines()),
-            "ts" => libs.extend(all_suites["ts"].lines()),
-            unknown => {
-                eprintln!("Unknown suite: {}", unknown);
-            }
+            key => match all_suites.get(key) {
+                Some(suite) => libs.extend(suite.lines()),
+                None => {
+                    eprintln!("Unknown suite: {key}");
+                }
+            },
         }
     }
 
@@ -111,13 +129,13 @@ pub fn run(args: RunArgs) {
             continue;
         }
 
-        let code = get_code(lib);
+        let test_case = TestCase::try_from(lib);
 
-        match code {
-            Ok((id, code)) => {
-                let code = code.as_str();
+        match test_case {
+            Ok(test_case) => {
+                let parse = Parse::try_from_case(&test_case).expect("Supported language");
 
-                let source_type: SourceType = Path::new(&id).try_into().unwrap();
+                let code = test_case.code();
 
                 // Do all steps with criterion now
                 if args.criterion {
@@ -130,36 +148,87 @@ pub fn run(args: RunArgs) {
                     let mut group = criterion.benchmark_group(args.feature.to_string());
                     group.throughput(criterion::Throughput::Bytes(code.len() as u64));
 
-                    group.bench_function(&id, |b| match args.feature {
-                        FeatureToBenchmark::Parser => b.iter(|| {
-                            criterion::black_box(run_parse(code, source_type.clone()));
-                        }),
-                        FeatureToBenchmark::Formatter => {
-                            let root = parse(code, 0, source_type.clone()).syntax();
-                            b.iter(|| {
-                                criterion::black_box(run_format(&root));
-                            })
-                        }
-                    });
-                    group.finish();
-                } else {
-                    //warmup
                     match args.feature {
                         FeatureToBenchmark::Parser => {
-                            run_parse(code, source_type.clone());
+                            group.bench_function(
+                                BenchmarkId::new(test_case.filename(), "uncached"),
+                                |b| {
+                                    b.iter(|| {
+                                        criterion::black_box(parse.parse());
+                                    })
+                                },
+                            );
+                            group.bench_function(
+                                BenchmarkId::new(test_case.filename(), "cached"),
+                                |b| {
+                                    b.iter_batched(
+                                        || {
+                                            let mut cache = NodeCache::default();
+                                            parse.parse_with_cache(&mut cache);
+                                            cache
+                                        },
+                                        |mut cache| {
+                                            criterion::black_box(
+                                                parse.parse_with_cache(&mut cache),
+                                            );
+                                        },
+                                        BatchSize::SmallInput,
+                                    )
+                                },
+                            );
                         }
                         FeatureToBenchmark::Formatter => {
-                            let root = parse(code, 0, source_type.clone()).syntax();
-                            run_format(&root);
+                            let parsed = parse.parse();
+
+                            match parsed.format_node() {
+                                None => {
+                                    continue;
+                                }
+                                Some(format_node) => {
+                                    group.bench_function(test_case.filename(), |b| {
+                                        b.iter(|| {
+                                            criterion::black_box(run_format(&format_node));
+                                        })
+                                    });
+                                }
+                            }
+                        }
+                        FeatureToBenchmark::Analyzer => {
+                            let parsed = parse.parse();
+
+                            match parsed.analyze() {
+                                None => {
+                                    continue;
+                                }
+                                Some(analyze) => {
+                                    group.bench_function(test_case.filename(), |b| {
+                                        b.iter(|| {
+                                            analyze.analyze();
+                                            criterion::black_box(());
+                                        })
+                                    });
+                                }
+                            }
                         }
                     }
+
+                    group.finish();
                 }
 
                 let result = match args.feature {
-                    FeatureToBenchmark::Parser => benchmark_parse_lib(&id, code, source_type),
+                    FeatureToBenchmark::Parser => benchmark_parse_lib(&test_case, &parse),
                     FeatureToBenchmark::Formatter => {
-                        let root = parse(code, 0, source_type).syntax();
-                        benchmark_format_lib(&id, &root)
+                        let parsed = parse.parse();
+                        let format_node = parsed
+                            .format_node()
+                            .expect("Expect formatting to be supported");
+
+                        benchmark_format_lib(test_case.filename(), &format_node)
+                    }
+                    FeatureToBenchmark::Analyzer => {
+                        let parsed = parse.parse();
+                        let analyze = parsed.analyze().expect("Expect analyze to be supported");
+                        benchmark_analyze_lib(&test_case, &analyze)
                     }
                 };
 

@@ -4,6 +4,7 @@ JsModule {
     items: JsModuleItemList [
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@0..4 "let" [] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -23,6 +24,7 @@ JsModule {
                                         },
                                         l_paren_token: L_PAREN@18..19 "(" [] [],
                                         parameter: JsFormalParameter {
+                                            decorators: JsDecoratorList [],
                                             binding: JsIdentifierBinding {
                                                 name_token: IDENT@19..24 "value" [] [],
                                             },
@@ -46,6 +48,7 @@ JsModule {
                                         },
                                         l_paren_token: L_PAREN@42..43 "(" [] [],
                                         parameter: JsFormalParameter {
+                                            decorators: JsDecoratorList [],
                                             binding: JsIdentifierBinding {
                                                 name_token: IDENT@43..48 "value" [] [],
                                             },
@@ -79,6 +82,7 @@ JsModule {
                                         },
                                         l_paren_token: L_PAREN@72..73 "(" [] [],
                                         parameter: JsFormalParameter {
+                                            decorators: JsDecoratorList [],
                                             binding: JsIdentifierBinding {
                                                 name_token: IDENT@73..78 "value" [] [],
                                             },
@@ -102,6 +106,7 @@ JsModule {
                                         },
                                         l_paren_token: L_PAREN@92..93 "(" [] [],
                                         parameter: JsFormalParameter {
+                                            decorators: JsDecoratorList [],
                                             binding: JsIdentifierBinding {
                                                 name_token: IDENT@93..98 "value" [] [],
                                             },
@@ -165,8 +170,9 @@ JsModule {
   2: JS_MODULE_ITEM_LIST@0..165
     0: JS_VARIABLE_STATEMENT@0..165
       0: JS_VARIABLE_DECLARATION@0..165
-        0: LET_KW@0..4 "let" [] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@4..165
+        0: (empty)
+        1: LET_KW@0..4 "let" [] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@4..165
           0: JS_VARIABLE_DECLARATOR@4..165
             0: JS_IDENTIFIER_BINDING@4..6
               0: IDENT@4..6 "a" [] [Whitespace(" ")]
@@ -182,11 +188,12 @@ JsModule {
                       0: IDENT@15..18 "foo" [] []
                     2: L_PAREN@18..19 "(" [] []
                     3: JS_FORMAL_PARAMETER@19..24
-                      0: JS_IDENTIFIER_BINDING@19..24
+                      0: JS_DECORATOR_LIST@19..19
+                      1: JS_IDENTIFIER_BINDING@19..24
                         0: IDENT@19..24 "value" [] []
-                      1: (empty)
                       2: (empty)
                       3: (empty)
+                      4: (empty)
                     4: R_PAREN@24..26 ")" [] [Whitespace(" ")]
                     5: JS_FUNCTION_BODY@26..30
                       0: L_CURLY@26..27 "{" [] []
@@ -200,11 +207,12 @@ JsModule {
                       0: JS_STRING_LITERAL@37..42 "\"bar\"" [] []
                     2: L_PAREN@42..43 "(" [] []
                     3: JS_FORMAL_PARAMETER@43..48
-                      0: JS_IDENTIFIER_BINDING@43..48
+                      0: JS_DECORATOR_LIST@43..43
+                      1: JS_IDENTIFIER_BINDING@43..48
                         0: IDENT@43..48 "value" [] []
-                      1: (empty)
                       2: (empty)
                       3: (empty)
+                      4: (empty)
                     4: R_PAREN@48..50 ")" [] [Whitespace(" ")]
                     5: JS_FUNCTION_BODY@50..54
                       0: L_CURLY@50..51 "{" [] []
@@ -225,11 +233,12 @@ JsModule {
                       2: R_BRACK@71..72 "]" [] []
                     2: L_PAREN@72..73 "(" [] []
                     3: JS_FORMAL_PARAMETER@73..78
-                      0: JS_IDENTIFIER_BINDING@73..78
+                      0: JS_DECORATOR_LIST@73..73
+                      1: JS_IDENTIFIER_BINDING@73..78
                         0: IDENT@73..78 "value" [] []
-                      1: (empty)
                       2: (empty)
                       3: (empty)
+                      4: (empty)
                     4: R_PAREN@78..80 ")" [] [Whitespace(" ")]
                     5: JS_FUNCTION_BODY@80..84
                       0: L_CURLY@80..81 "{" [] []
@@ -243,11 +252,12 @@ JsModule {
                       0: JS_NUMBER_LITERAL@91..92 "5" [] []
                     2: L_PAREN@92..93 "(" [] []
                     3: JS_FORMAL_PARAMETER@93..98
-                      0: JS_IDENTIFIER_BINDING@93..98
+                      0: JS_DECORATOR_LIST@93..93
+                      1: JS_IDENTIFIER_BINDING@93..98
                         0: IDENT@93..98 "value" [] []
-                      1: (empty)
                       2: (empty)
                       3: (empty)
+                      4: (empty)
                     4: R_PAREN@98..100 ")" [] [Whitespace(" ")]
                     5: JS_FUNCTION_BODY@100..104
                       0: L_CURLY@100..101 "{" [] []

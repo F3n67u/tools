@@ -1,10 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 57
-expression: colons-after-substitutions.js
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/multiparser-css/colons-after-substitutions.js
 ---
+
 # Input
+
 ```js
 const Icon = styled.div`
   flex: none;
@@ -25,7 +26,37 @@ const Icon = styled.div`
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,17 +1,16 @@
+ const Icon = styled.div`
+   flex: none;
+-  transition: fill 0.25s;
++  transition:    fill 0.25s;
+   width: 48px;
+   height: 48px;
+ 
+   ${Link}:hover {
+-    fill: rebeccapurple;
++    fill:   rebeccapurple;
+   }
+ 
+   ${Link} :hover {
+     fill: yellow;
+   }
+ 
+-  ${media.smallDown}::before {
+-  }
++  ${media.smallDown}::before {}
+ `;
+```
+
 # Output
+
 ```js
 const Icon = styled.div`
   flex: none;
@@ -43,7 +74,6 @@ const Icon = styled.div`
 
   ${media.smallDown}::before {}
 `;
-
 ```
 
 

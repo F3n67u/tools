@@ -13,7 +13,7 @@ JsModule {
             members: TsTypeMemberList [],
             r_curly_token: R_CURLY@13..14 "}" [] [],
         },
-        JsUnknownStatement {
+        JsBogusStatement {
             items: [
                 INTERFACE_KW@14..25 "interface" [Newline("\n")] [Whitespace(" ")],
                 TsIdentifierBinding {
@@ -35,7 +35,7 @@ JsModule {
                 R_CURLY@41..42 "}" [] [],
             ],
         },
-        JsUnknownStatement {
+        JsBogusStatement {
             items: [
                 INTERFACE_KW@42..53 "interface" [Newline("\n")] [Whitespace(" ")],
                 TsIdentifierBinding {
@@ -122,7 +122,7 @@ JsModule {
       4: L_CURLY@12..13 "{" [] []
       5: TS_TYPE_MEMBER_LIST@13..13
       6: R_CURLY@13..14 "}" [] []
-    1: JS_UNKNOWN_STATEMENT@14..42
+    1: JS_BOGUS_STATEMENT@14..42
       0: INTERFACE_KW@14..25 "interface" [Newline("\n")] [Whitespace(" ")]
       1: TS_IDENTIFIER_BINDING@25..27
         0: IDENT@25..27 "B" [] [Whitespace(" ")]
@@ -136,7 +136,7 @@ JsModule {
       3: L_CURLY@40..41 "{" [] []
       4: TS_TYPE_MEMBER_LIST@41..41
       5: R_CURLY@41..42 "}" [] []
-    2: JS_UNKNOWN_STATEMENT@42..77
+    2: JS_BOGUS_STATEMENT@42..77
       0: INTERFACE_KW@42..53 "interface" [Newline("\n")] [Whitespace(" ")]
       1: TS_IDENTIFIER_BINDING@53..55
         0: IDENT@53..55 "C" [] [Whitespace(" ")]
@@ -187,35 +187,60 @@ JsModule {
       6: R_CURLY@125..126 "}" [] []
   3: EOF@126..127 "" [Newline("\n")] []
 --
-error[SyntaxError]: Interface declaration cannot have 'implements' clause.
-  ┌─ ts_interface_heritage_clause_error.ts:2:13
-  │
-2 │ interface B implements A {}
-  │             ^^^^^^^^^^^^
+ts_interface_heritage_clause_error.ts:2:13 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Interface declaration cannot have 'implements' clause.
+  
+    1 │ interface A {}
+  > 2 │ interface B implements A {}
+      │             ^^^^^^^^^^^^
+    3 │ interface C extends A extends B {}
+    4 │ interface D extends {}
+  
 --
-error[SyntaxError]: 'extends' clause already seen.
-  ┌─ ts_interface_heritage_clause_error.ts:3:23
-  │
-3 │ interface C extends A extends B {}
-  │             --------- ^^^^^^^^^
-  │             │          
-  │             first 'extends' clause
+ts_interface_heritage_clause_error.ts:3:23 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × 'extends' clause already seen.
+  
+    1 │ interface A {}
+    2 │ interface B implements A {}
+  > 3 │ interface C extends A extends B {}
+      │                       ^^^^^^^^^
+    4 │ interface D extends {}
+    5 │ interface E extends A, {}
+  
+  i first 'extends' clause
+  
+    1 │ interface A {}
+    2 │ interface B implements A {}
+  > 3 │ interface C extends A extends B {}
+      │             ^^^^^^^^^
+    4 │ interface D extends {}
+    5 │ interface E extends A, {}
+  
 --
-error[SyntaxError]: 'extends' list cannot be empty.
-  ┌─ ts_interface_heritage_clause_error.ts:4:21
-  │
-4 │ interface D extends {}
-  │                     ^
+ts_interface_heritage_clause_error.ts:4:21 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × 'extends' list cannot be empty.
+  
+    2 │ interface B implements A {}
+    3 │ interface C extends A extends B {}
+  > 4 │ interface D extends {}
+      │                     
+    5 │ interface E extends A, {}
+    6 │ 
+  
 --
-error[SyntaxError]: Trailing comma not allowed.
-  ┌─ ts_interface_heritage_clause_error.ts:5:22
-  │
-5 │ interface E extends A, {}
-  │                      ^
+ts_interface_heritage_clause_error.ts:5:22 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Trailing comma not allowed.
+  
+    3 │ interface C extends A extends B {}
+    4 │ interface D extends {}
+  > 5 │ interface E extends A, {}
+      │                      ^
+    6 │ 
+  
 --
 interface A {}
 interface B implements A {}

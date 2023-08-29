@@ -1,14 +1,15 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::{JsxAttribute, JsxAttributeFields};
 
-impl ToFormatElement for JsxAttribute {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsxAttributeFields { name, initializer } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub struct FormatJsxAttribute;
 
-        Ok(format_elements![
-            name.format(formatter)?,
-            initializer.format_or_empty(formatter)?
-        ])
+impl FormatNodeRule<JsxAttribute> for FormatJsxAttribute {
+    fn fmt_fields(&self, node: &JsxAttribute, f: &mut JsFormatter) -> FormatResult<()> {
+        let JsxAttributeFields { name, initializer } = node.as_fields();
+
+        write![f, [name.format(), initializer.format()]]
     }
 }

@@ -1,17 +1,23 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyObjectBindingPatternMember;
-impl ToFormatElement for JsAnyObjectBindingPatternMember {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsObjectBindingPatternProperty(node) => node.to_format_element(formatter),
-            Self::JsObjectBindingPatternRest(node) => node.to_format_element(formatter),
-            Self::JsObjectBindingPatternShorthandProperty(node) => {
-                node.to_format_element(formatter)
+use crate::prelude::*;
+use rome_js_syntax::AnyJsObjectBindingPatternMember;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsObjectBindingPatternMember;
+impl FormatRule<AnyJsObjectBindingPatternMember> for FormatAnyJsObjectBindingPatternMember {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsObjectBindingPatternMember, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsObjectBindingPatternMember::JsObjectBindingPatternProperty(node) => {
+                node.format().fmt(f)
             }
-            Self::JsIdentifierBinding(node) => node.to_format_element(formatter),
-            Self::JsUnknownBinding(node) => node.to_format_element(formatter),
+            AnyJsObjectBindingPatternMember::JsObjectBindingPatternRest(node) => {
+                node.format().fmt(f)
+            }
+            AnyJsObjectBindingPatternMember::JsObjectBindingPatternShorthandProperty(node) => {
+                node.format().fmt(f)
+            }
+            AnyJsObjectBindingPatternMember::JsBogusBinding(node) => node.format().fmt(f),
         }
     }
 }

@@ -75,7 +75,7 @@ JsModule {
             consequent: missing (required),
             else_clause: missing (optional),
         },
-        JsUnknownStatement {
+        JsBogusStatement {
             items: [
                 R_CURLY@70..71 "}" [] [],
                 R_CURLY@71..72 "}" [] [],
@@ -153,7 +153,7 @@ JsModule {
       3: R_PAREN@69..70 ")" [] []
       4: (empty)
       5: (empty)
-    4: JS_UNKNOWN_STATEMENT@70..75
+    4: JS_BOGUS_STATEMENT@70..75
       0: R_CURLY@70..71 "}" [] []
       1: R_CURLY@71..72 "}" [] []
       2: R_CURLY@72..73 "}" [] []
@@ -164,40 +164,95 @@ JsModule {
       2: R_CURLY@76..77 "}" [] []
   3: EOF@77..78 "" [Newline("\n")] []
 --
-error[SyntaxError]: expected a statement but instead found 'else'
-  ┌─ if_stmt_err.js:1:11
-  │
-1 │ if (true) else {}
-  │           ^^^^ Expected a statement here
+if_stmt_err.js:1:11 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected a statement but instead found 'else'
+  
+  > 1 │ if (true) else {}
+      │           ^^^^
+    2 │ if (true) else
+    3 │ if else {}
+  
+  i Expected a statement here
+  
+  > 1 │ if (true) else {}
+      │           ^^^^
+    2 │ if (true) else
+    3 │ if else {}
+  
 --
-error[SyntaxError]: expected a statement but instead found 'else'
-  ┌─ if_stmt_err.js:2:11
-  │
-2 │ if (true) else
-  │           ^^^^ Expected a statement here
+if_stmt_err.js:2:11 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected a statement but instead found 'else'
+  
+    1 │ if (true) else {}
+  > 2 │ if (true) else
+      │           ^^^^
+    3 │ if else {}
+    4 │ if () {} else {}
+  
+  i Expected a statement here
+  
+    1 │ if (true) else {}
+  > 2 │ if (true) else
+      │           ^^^^
+    3 │ if else {}
+    4 │ if () {} else {}
+  
 --
-error[SyntaxError]: expected `'('` but instead found `else`
-  ┌─ if_stmt_err.js:3:4
-  │
-3 │ if else {}
-  │    ^^^^ unexpected
+if_stmt_err.js:3:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `(` but instead found `else`
+  
+    1 │ if (true) else {}
+    2 │ if (true) else
+  > 3 │ if else {}
+      │    ^^^^
+    4 │ if () {} else {}
+    5 │ if (true)}}}} {}
+  
+  i Remove else
+  
 --
-error[SyntaxError]: expected an expression but instead found ')'
-  ┌─ if_stmt_err.js:4:5
-  │
-4 │ if () {} else {}
-  │     ^ Expected an expression here
+if_stmt_err.js:4:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an expression but instead found ')'
+  
+    2 │ if (true) else
+    3 │ if else {}
+  > 4 │ if () {} else {}
+      │     ^
+    5 │ if (true)}}}} {}
+    6 │ 
+  
+  i Expected an expression here
+  
+    2 │ if (true) else
+    3 │ if else {}
+  > 4 │ if () {} else {}
+      │     ^
+    5 │ if (true)}}}} {}
+    6 │ 
+  
 --
-error[SyntaxError]: expected a statement but instead found '}'
-  ┌─ if_stmt_err.js:5:10
-  │
-5 │ if (true)}}}} {}
-  │          ^ Expected a statement here
+if_stmt_err.js:5:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected a statement but instead found '}'
+  
+    3 │ if else {}
+    4 │ if () {} else {}
+  > 5 │ if (true)}}}} {}
+      │          ^
+    6 │ 
+  
+  i Expected a statement here
+  
+    3 │ if else {}
+    4 │ if () {} else {}
+  > 5 │ if (true)}}}} {}
+      │          ^
+    6 │ 
+  
 --
 if (true) else {}
 if (true) else

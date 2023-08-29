@@ -84,26 +84,58 @@ JsModule {
       1: (empty)
   3: EOF@18..19 "" [Newline("\n")] []
 --
-error[SyntaxError]: expected an expression but instead found ']'
-  ┌─ bracket_expr_err.js:1:5
-  │
-1 │ foo[]
-  │     ^ Expected an expression here
+bracket_expr_err.js:1:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an expression but instead found ']'
+  
+  > 1 │ foo[]
+      │     ^
+    2 │ foo?.[]
+    3 │ foo[
+  
+  i Expected an expression here
+  
+  > 1 │ foo[]
+      │     ^
+    2 │ foo?.[]
+    3 │ foo[
+  
 --
-error[SyntaxError]: expected an expression but instead found ']'
-  ┌─ bracket_expr_err.js:2:7
-  │
-2 │ foo?.[]
-  │       ^ Expected an expression here
+bracket_expr_err.js:2:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an expression but instead found ']'
+  
+    1 │ foo[]
+  > 2 │ foo?.[]
+      │       ^
+    3 │ foo[
+    4 │ 
+  
+  i Expected an expression here
+  
+    1 │ foo[]
+  > 2 │ foo?.[]
+      │       ^
+    3 │ foo[
+    4 │ 
+  
 --
-error[SyntaxError]: expected an expression but instead found ''
-  ┌─ bracket_expr_err.js:4:1
-  │
-4 │ 
-  │ ^ Expected an expression here
+bracket_expr_err.js:4:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an expression but instead found the end of the file
+  
+    2 │ foo?.[]
+    3 │ foo[
+  > 4 │ 
+      │ 
+  
+  i Expected an expression here
+  
+    2 │ foo?.[]
+    3 │ foo[
+  > 4 │ 
+      │ 
+  
 --
 foo[]
 foo?.[]

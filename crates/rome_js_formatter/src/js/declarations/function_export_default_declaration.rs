@@ -1,9 +1,20 @@
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyFunction;
+use crate::prelude::*;
+use rome_formatter::write;
+
+use crate::js::declarations::function_declaration::FormatFunction;
 use rome_js_syntax::JsFunctionExportDefaultDeclaration;
 
-impl ToFormatElement for JsFunctionExportDefaultDeclaration {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        JsAnyFunction::from(self.clone()).to_format_element(formatter)
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsFunctionExportDefaultDeclaration;
+
+impl FormatNodeRule<JsFunctionExportDefaultDeclaration>
+    for FormatJsFunctionExportDefaultDeclaration
+{
+    fn fmt_fields(
+        &self,
+        node: &JsFunctionExportDefaultDeclaration,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        write![f, [FormatFunction::from(node.clone())]]
     }
 }

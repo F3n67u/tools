@@ -1,16 +1,15 @@
+use crate::prelude::*;
+use rome_formatter::write;
 use rome_js_syntax::JsForOfStatement;
 
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-
-use crate::utils::format_head_body_statement;
-use crate::{
-    format_elements, soft_line_break_or_space, space_token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::utils::FormatStatementBody;
 use rome_js_syntax::JsForOfStatementFields;
 
-impl ToFormatElement for JsForOfStatement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsForOfStatement;
+
+impl FormatNodeRule<JsForOfStatement> for FormatJsForOfStatement {
+    fn fmt_fields(&self, node: &JsForOfStatement, f: &mut JsFormatter) -> FormatResult<()> {
         let JsForOfStatementFields {
             for_token,
             await_token,
@@ -20,34 +19,33 @@ impl ToFormatElement for JsForOfStatement {
             expression,
             r_paren_token,
             body,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let for_token = for_token.format(formatter)?;
-        let await_token = await_token
-            .format_with_or_empty(formatter, |token| format_elements![token, space_token()])?;
-        let initializer = initializer.format(formatter)?;
-        let of_token = of_token.format(formatter)?;
-        let expression = expression.format(formatter)?;
+        let body = body?;
 
-        format_head_body_statement(
-            formatter,
-            format_elements![
-                for_token,
-                space_token(),
-                await_token,
-                formatter.format_delimited_soft_block_indent(
-                    &l_paren_token?,
-                    format_elements![
-                        initializer,
-                        soft_line_break_or_space(),
-                        of_token,
-                        soft_line_break_or_space(),
-                        expression,
-                    ],
-                    &r_paren_token?
-                )?,
-            ],
-            body?,
-        )
+        let format_inner = format_with(|f| {
+            write!(f, [for_token.format()])?;
+
+            if let Some(await_token) = await_token.as_ref() {
+                write!(f, [space(), await_token.format()])?;
+            }
+
+            write!(
+                f,
+                [
+                    space(),
+                    l_paren_token.format(),
+                    initializer.format(),
+                    space(),
+                    of_token.format(),
+                    space(),
+                    expression.format(),
+                    r_paren_token.format(),
+                    FormatStatementBody::new(&body)
+                ]
+            )
+        });
+
+        write!(f, [group(&format_inner)])
     }
 }

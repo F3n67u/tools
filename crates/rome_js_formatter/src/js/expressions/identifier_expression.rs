@@ -1,14 +1,32 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-
-use rome_js_syntax::JsIdentifierExpression;
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
 use rome_js_syntax::JsIdentifierExpressionFields;
+use rome_js_syntax::{JsIdentifierExpression, JsSyntaxNode};
 
-impl ToFormatElement for JsIdentifierExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsIdentifierExpressionFields { name } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsIdentifierExpression;
 
-        name.format(formatter)
+impl FormatNodeRule<JsIdentifierExpression> for FormatJsIdentifierExpression {
+    fn fmt_fields(&self, node: &JsIdentifierExpression, f: &mut JsFormatter) -> FormatResult<()> {
+        let JsIdentifierExpressionFields { name } = node.as_fields();
+
+        write![f, [name.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &JsIdentifierExpression) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for JsIdentifierExpression {
+    #[inline(always)]
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+    #[inline(always)]
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

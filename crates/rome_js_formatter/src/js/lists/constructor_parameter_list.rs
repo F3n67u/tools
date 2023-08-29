@@ -1,15 +1,20 @@
-use crate::formatter::TrailingSeparator;
-use crate::{
-    join_elements, soft_line_break_or_space, token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::js::bindings::parameters::ParameterLayout;
+use crate::js::lists::parameter_list::FormatJsAnyParameterList;
+use crate::prelude::*;
+use rome_js_syntax::parameter_ext::AnyJsParameterList;
 use rome_js_syntax::JsConstructorParameterList;
 
-impl ToFormatElement for JsConstructorParameterList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(join_elements(
-            soft_line_break_or_space(),
-            formatter.format_separated(self, || token(","), TrailingSeparator::default())?,
-        ))
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsConstructorParameterList;
+
+impl FormatRule<JsConstructorParameterList> for FormatJsConstructorParameterList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &JsConstructorParameterList, f: &mut JsFormatter) -> FormatResult<()> {
+        FormatJsAnyParameterList::with_layout(
+            &AnyJsParameterList::from(node.clone()),
+            ParameterLayout::Default,
+        )
+        .fmt(f)
     }
 }

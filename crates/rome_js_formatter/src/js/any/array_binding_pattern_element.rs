@@ -1,14 +1,21 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyArrayBindingPatternElement;
-impl ToFormatElement for JsAnyArrayBindingPatternElement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsArrayHole(node) => node.to_format_element(formatter),
-            Self::JsAnyBindingPattern(node) => node.to_format_element(formatter),
-            Self::JsBindingPatternWithDefault(node) => node.to_format_element(formatter),
-            Self::JsArrayBindingPatternRestElement(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyJsArrayBindingPatternElement;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsArrayBindingPatternElement;
+impl FormatRule<AnyJsArrayBindingPatternElement> for FormatAnyJsArrayBindingPatternElement {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsArrayBindingPatternElement, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsArrayBindingPatternElement::JsArrayHole(node) => node.format().fmt(f),
+            AnyJsArrayBindingPatternElement::AnyJsBindingPattern(node) => node.format().fmt(f),
+            AnyJsArrayBindingPatternElement::JsBindingPatternWithDefault(node) => {
+                node.format().fmt(f)
+            }
+            AnyJsArrayBindingPatternElement::JsArrayBindingPatternRestElement(node) => {
+                node.format().fmt(f)
+            }
         }
     }
 }

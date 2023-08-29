@@ -2,12 +2,12 @@ JsModule {
     interpreter_token: missing (optional),
     directives: JsDirectiveList [],
     items: JsModuleItemList [
-        JsUnknownStatement {
+        JsBogusStatement {
             items: [
                 IMPORT_KW@0..7 "import" [] [Whitespace(" ")],
-                JsUnknown {
+                JsBogus {
                     items: [
-                        JsUnknown {
+                        JsBogus {
                             items: [
                                 TYPE_KW@7..12 "type" [] [Whitespace(" ")],
                                 JsIdentifierBinding {
@@ -52,10 +52,10 @@ JsModule {
   0: (empty)
   1: JS_DIRECTIVE_LIST@0..0
   2: JS_MODULE_ITEM_LIST@0..35
-    0: JS_UNKNOWN_STATEMENT@0..35
+    0: JS_BOGUS_STATEMENT@0..35
       0: IMPORT_KW@0..7 "import" [] [Whitespace(" ")]
-      1: JS_UNKNOWN@7..34
-        0: JS_UNKNOWN@7..15
+      1: JS_BOGUS@7..34
+        0: JS_BOGUS@7..15
           0: TYPE_KW@7..12 "type" [] [Whitespace(" ")]
           1: JS_IDENTIFIER_BINDING@12..13
             0: IDENT@12..13 "A" [] []
@@ -79,11 +79,13 @@ JsModule {
       2: SEMICOLON@34..35 ";" [] []
   3: EOF@35..36 "" [Newline("\n")] []
 --
-error[SyntaxError]: A type-only import can specify a default import or named bindings, but not both.
-  ┌─ ts_typed_default_import_with_named.ts:1:8
-  │
-1 │ import type A, { B, C } from './a';
-  │        ^^^^^^^^^^^^^^^^
+ts_typed_default_import_with_named.ts:1:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × A type-only import can specify a default import or named bindings, but not both.
+  
+  > 1 │ import type A, { B, C } from './a';
+      │        ^^^^^^^^^^^^^^^^
+    2 │ 
+  
 --
 import type A, { B, C } from './a';

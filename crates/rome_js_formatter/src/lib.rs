@@ -1,105 +1,504 @@
 //! Rome's official JavaScript formatter.
+//!
+//! ## Implement the formatter
+//!
+//! Our formatter is node based. Meaning that each AST node knows how to format itself. In order to implement
+//! the formatting, a node has to implement the trait `FormatNode`.
+//!
+//! `rome` has an automatic code generation that creates automatically the files out of the grammar.
+//! By default, all implementations will format verbatim,
+//! meaning that the formatter will print tokens and trivia as they are (`format_verbatim`).
+//!
+//! Our formatter has its own [internal IR](https://en.wikipedia.org/wiki/Intermediate_representation), it creates its own abstraction from an AST.
+//!
+//! The developer won't be creating directly this IR, but they will use a series of utilities that will help
+//! to create this IR. The whole IR is represented by the `enum` `FormatElement`.
+//!
+//! ### Best Practices
+//!
+//! 1. Use the `*Fields` struct to extract all the tokens/nodes
+//!     ```rust,ignore
+//!     #[derive(Debug, Clone, Default)]
+//!     pub struct FormatJsExportDefaultExpressionClause;
+//!
+//!     impl FormatNodeRule<JsExportDefaultExpressionClause> for FormatJsExportDefaultExpressionClauses {
+//!         fn fmt_fields(&self, node: &JsExportDefaultExpressionClause, f: &mut JsFormatter) -> FormatResult<()> {
+//!             let JsExportDefaultExpressionClauseFields {
+//!                 default_token,
+//!                 expression,
+//!                 semicolon_token,
+//!             }  = node.as_fields();
+//!        }
+//!     }
+//!     ```
+//! 2. When using `.as_fields()` with the destructuring, don't use the `..` feature. Prefer extracting all fields and ignore them
+//!    using the `_`
+//!    ```rust,ignore
+//!    #[derive(Debug, Clone, Default)]
+//!    pub struct FormatJsExportDefaultExpressionClause;
+//!
+//!    impl FormatNodeRule<JsExportDefaultExpressionClause> for FormatJsExportDefaultExpressionClauses {
+//!        fn fmt_fields(&self, node: &JsExportDefaultExpressionClause, f: &mut JsFormatter) -> FormatResult<()> {
+//!             let JsExportDefaultExpressionClauseFields {
+//!                 default_token,
+//!                 expression: _,
+//!                 semicolon_token
+//!             } = node.as_fields();
+//!         }
+//!    }
+//!    ```
+//!    The reason why we want to promote this pattern is because we want to make explicit when a token/node is excluded;
+//! 3. Use the APIs provided by `builders.rs`, `formatter` and `format_extensions.rs`.
+//!    1. `builders.rs` exposes a series of utilities to craft the formatter IR; please refer to their internal
+//!    documentation to understand what the utilities are for;
+//!    2. `formatter` exposes a set of functions to help to format some recurring patterns; please refer to their internal
+//!    documentation to understand how to use them and when;
+//!    3. `format_extensions.rs`: with these traits, we give the ability to nodes and tokens to implements certain methods
+//!    that are exposed based on its type. If you have a good IDE support, this feature will help you. For example:
+//!
+//!    ```rust,ignore
+//!    #[derive(Debug, Clone, Default)]
+//!    pub struct FormatJsExportDefaultExpressionClause;
+//!
+//!    impl FormatNodeRule<JsExportDefaultExpressionClause> for FormatJsExportDefaultExpressionClauses{
+//!         fn fmt_fields(&self, node: &JsExportDefaultExpressionClause, f: &mut JsFormatter) -> FormatResult<()> {
+//!             let JsExportDefaultExpressionClauseFields {
+//!                 default_token,
+//!                 expression, // it's a mandatory node
+//!                 semicolon_token, // this is not a mandatory node
+//!             } = node.as_fields();
+//!             let element = expression.format();
+//!
+//!             if let Some(expression) = &expression? {
+//!                 write!(f, [expression.format(), space()])?;
+//!             }
+//!
+//!             if let Some(semicolon) = &semicolon_token {
+//!                 write!(f, [semicolon.format()])?;
+//!             } else {
+//!                 write!(f, [space()])?;
+//!             }
+//!         }
+//!    }
+//!    ```
+//!
+//! 4. Use the [playground](https://play.rome.tools) to inspect the code that you want to format.
+//! It helps you to understand which nodes need to be implemented/modified
+//! in order to implement formatting. Alternatively, you can locally run the playground by following
+//! the [playground instructions](https://github.com/rome/tools/blob/main/website/playground/README.md).
+//! 5. Use the `quick_test.rs` file in `tests/` directory.
+//! function to test you snippet straight from your IDE, without running the whole test suite. The test
+//! is ignored on purpose, so you won't need to worry about the CI breaking.
+//!
+//! ## Testing
+//!
+//! We use [insta.rs](https://insta.rs/docs) for our snapshot tests, please make sure you read its documentation to learn the basics of snapshot testing.
+//! You should install the companion [`cargo-insta`](https://insta.rs/docs/cli/) command to assist with snapshot reviewing.
+//!
+//! Directories are divided by language, so when creating a new test file, make sure to have the correct file
+//! under the correct folder:
+//! - `JavaScript` => `js/` directory
+//! - `TypeScript` => `ts/` directory
+//! - `JSX` => `jsx/` directory
+//! - `TSX` => `ts/` directory
+//!
+//! To create a new snapshot test for JavaScript, create a new file to `crates/rome_js_formatter/tests/specs/js/`, e.g. `arrow_with_spaces.js`
+//!
+//! ```javascript
+//! const foo     = ()    => {
+//!     return bar
+//! }
+//! ```
+//!
+//! Files processed as modules must go inside the `module/` directory, files processed as script must go inside the
+//! `script/` directory.
+//!
+//! Run the following command to generate the new snapshot (the snapshot tests are generated by a procedure macro so we need to recompile the tests):
+//!
+//! ```bash
+//! touch crates/rome_js_formatter/tests/spec_tests.rs && cargo test -p rome_js_formatter formatter
+//! ```
+//!
+//! For better test driven development flow, start the formatter tests with [`cargo-watch`](https://crates.io/crates/cargo-watch):
+//!
+//! ```bash
+//! cargo watch -i '*.new' -x 'test -p rome_js_formatter formatter'
+//! ```
+//!
+//! After test execution, you will get a new `arrow.js.snap.new` file.
+//!
+//! To actually update the snapshot, run `cargo insta review` to interactively review and accept the pending snapshot. `arrow.js.snap.new` will be replaced with `arrow.js.snap`
+//!
+//! Sometimes, you need to verify the formatting for different cases/options. In order to do that, create a folder with
+//! the cases you need to verify. If we needed to follow the previous example:
+//!
+//! 1. create a folder called `arrow_with_spaces/` and move the JS file there;
+//! 2. then create a file called `options.json`
+//! 3. The content would be something like:
+//!     ```json
+//!     {
+//!         "cases": [
+//!             {
+//!                 "line_width": 120,
+//!                 "indent_style": {"Space": 4}
+//!             }
+//!         ]
+//!     }
+//!     ````
+//! 4. the `cases` keyword is mandatory;
+//! 5. then each object of the array will contain the matrix of options you'd want to test.
+//!    In this case the test suite will run a **second test case** with `line_width` to 120 and `ident_style` with  4 spaces
+//! 6. when the test suite is run, you will have two outputs in your snapshot: the default one and the custom one
+//!
+//! ### Debugging Test Failures
+//!
+//! There are four cases when a test is not correct:
+//! - you try to print/format the same token multiple times; the formatter will check at runtime when a test is run;
+//! - some tokens haven't been printed; usually you will have this information inside the snapshot, under a section
+//! called `"Unimplemented tokens/nodes"`; a test, in order to be valid, can't have that section;
+//!
+//!    If removing a token is the actual behaviour (removing some parenthesis or a semicolon), then the correct way
+//!    to do it by using the formatter API [rome_formatter::trivia::format_removed];
+//! - the emitted code is not a valid program anymore, the test suite will parse again the emitted code and it will
+//! fail if there are syntax errors;
+//! - the emitted code, when formatted again, differs from the original; this usually happens when removing/adding new
+//! elements, and the grouping is not correctly set;
 
 mod cst;
-mod formatter;
-mod formatter_traits;
 mod js;
 mod jsx;
-pub mod prelude;
+mod prelude;
 mod ts;
-mod utils;
-use std::error::Error;
-use std::fmt::{self, Display};
+pub mod utils;
 
-pub use formatter::Formatter;
-pub use rome_formatter::intersperse::{Intersperse, IntersperseFn};
-pub use rome_formatter::printer::{Printer, PrinterOptions};
-pub use rome_formatter::{
-    block_indent, comment, concat_elements, empty_element, empty_line, fill_elements,
-    format_element, format_elements, group_elements, hard_group_elements, hard_line_break,
-    if_group_breaks, if_group_fits_on_single_line, indent, join_elements, join_elements_hard_line,
-    join_elements_soft_line, join_elements_with, line_suffix, soft_block_indent, soft_line_break,
-    soft_line_break_or_space, soft_line_indent_or_space, space_token, token, FormatElement,
-    FormatOptions, Formatted, IndentStyle, QuoteStyle, Token, Verbatim, LINE_TERMINATORS,
+#[rustfmt::skip]
+mod generated;
+pub mod comments;
+pub mod context;
+mod parentheses;
+pub(crate) mod separated;
+mod syntax_rewriter;
+
+use rome_formatter::format_element::tag::Label;
+use rome_formatter::prelude::*;
+use rome_formatter::{
+    comments::Comments, write, CstFormatContext, Format, FormatLanguage, FormatToken,
+    TransformSourceMap,
 };
-use rome_js_syntax::JsSyntaxNode;
-use rome_rowan::TextSize;
-use rome_rowan::TokenAtOffset;
-use rome_rowan::{SyntaxError, TextRange};
+use rome_formatter::{Buffer, FormatOwnedWithRule, FormatRefWithRule, Formatted, Printed};
+use rome_js_syntax::{
+    AnyJsDeclaration, AnyJsStatement, JsLanguage, JsSyntaxKind, JsSyntaxNode, JsSyntaxToken,
+};
+use rome_rowan::TextRange;
+use rome_rowan::{AstNode, SyntaxNode};
 
-/// This trait should be implemented on each node/value that should have a formatted representation
-pub trait ToFormatElement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement>;
+use crate::comments::JsCommentStyle;
+use crate::context::{JsFormatContext, JsFormatOptions};
+use crate::cst::FormatJsSyntaxNode;
+use crate::syntax_rewriter::transform;
+
+/// Used to get an object that knows how to format this object.
+pub(crate) trait AsFormat<Context> {
+    type Format<'a>: rome_formatter::Format<Context>
+    where
+        Self: 'a;
+
+    /// Returns an object that is able to format this object.
+    fn format(&self) -> Self::Format<'_>;
 }
 
-/// Public return type of the formatter
-pub type FormatResult<F> = Result<F, FormatError>;
+/// Implement [AsFormat] for references to types that implement [AsFormat].
+impl<T, C> AsFormat<C> for &T
+where
+    T: AsFormat<C>,
+{
+    type Format<'a> = T::Format<'a> where Self: 'a;
 
-#[derive(Debug, PartialEq)]
-/// Series of errors encountered during formatting
-pub enum FormatError {
-    /// Node is missing and it should be required for a correct formatting
-    MissingRequiredChild,
-
-    /// In case our formatter doesn't know how to format a certain language
-    UnsupportedLanguage,
-
-    /// When the ability to format the current file has been turned off on purpose
-    CapabilityDisabled,
+    fn format(&self) -> Self::Format<'_> {
+        AsFormat::format(&**self)
+    }
 }
 
-impl Display for FormatError {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+/// Implement [AsFormat] for [SyntaxResult] where `T` implements [AsFormat].
+///
+/// Useful to format mandatory AST fields without having to unwrap the value first.
+impl<T, C> AsFormat<C> for rome_rowan::SyntaxResult<T>
+where
+    T: AsFormat<C>,
+{
+    type Format<'a> = rome_rowan::SyntaxResult<T::Format<'a>> where Self: 'a;
+
+    fn format(&self) -> Self::Format<'_> {
         match self {
-            FormatError::MissingRequiredChild => fmt.write_str("missing required child"),
-            FormatError::UnsupportedLanguage => fmt.write_str("language is not supported"),
-            FormatError::CapabilityDisabled => fmt.write_str("formatting capability is disabled"),
+            Ok(value) => Ok(value.format()),
+            Err(err) => Err(*err),
         }
     }
 }
 
-impl Error for FormatError {}
-
-impl From<SyntaxError> for FormatError {
-    fn from(syntax_error: SyntaxError) -> Self {
-        match syntax_error {
-            SyntaxError::MissingRequiredChild => FormatError::MissingRequiredChild,
-        }
-    }
-}
-
-impl From<&SyntaxError> for FormatError {
-    fn from(syntax_error: &SyntaxError) -> Self {
-        match syntax_error {
-            SyntaxError::MissingRequiredChild => FormatError::MissingRequiredChild,
-        }
-    }
-}
-
-/// Formats a JavaScript (and its super languages) file based on its features.
+/// Implement [AsFormat] for [Option] when `T` implements [AsFormat]
 ///
-/// It returns a [Formatted] result, which the user can use to override a file.
-pub fn format(options: FormatOptions, syntax: &JsSyntaxNode) -> FormatResult<Formatted> {
-    tracing::trace_span!("format").in_scope(move || {
-        let element = Formatter::new(options).format_root(syntax)?;
-        Ok(Printer::new(options).print(&element))
-    })
+/// Allows to call format on optional AST fields without having to unwrap the field first.
+impl<T, C> AsFormat<C> for Option<T>
+where
+    T: AsFormat<C>,
+{
+    type Format<'a> = Option<T::Format<'a>> where Self: 'a;
+
+    fn format(&self) -> Self::Format<'_> {
+        self.as_ref().map(|value| value.format())
+    }
 }
 
-/// Outputs formatter IR for a JavaScript (and its super languages) file
+/// Used to convert this object into an object that can be formatted.
 ///
-/// It returns a [FormatElement] result. Mostly for debugging purposes.
-pub fn to_format_element(
-    options: FormatOptions,
-    syntax: &JsSyntaxNode,
-) -> FormatResult<FormatElement> {
-    Formatter::new(options).format_root(syntax)
+/// The difference to [AsFormat] is that this trait takes ownership of `self`.
+pub(crate) trait IntoFormat<Context> {
+    type Format: rome_formatter::Format<Context>;
+
+    fn into_format(self) -> Self::Format;
+}
+
+impl<T, Context> IntoFormat<Context> for rome_rowan::SyntaxResult<T>
+where
+    T: IntoFormat<Context>,
+{
+    type Format = rome_rowan::SyntaxResult<T::Format>;
+
+    fn into_format(self) -> Self::Format {
+        self.map(IntoFormat::into_format)
+    }
+}
+
+/// Implement [IntoFormat] for [Option] when `T` implements [IntoFormat]
+///
+/// Allows to call format on optional AST fields without having to unwrap the field first.
+impl<T, Context> IntoFormat<Context> for Option<T>
+where
+    T: IntoFormat<Context>,
+{
+    type Format = Option<T::Format>;
+
+    fn into_format(self) -> Self::Format {
+        self.map(IntoFormat::into_format)
+    }
+}
+
+/// Formatting specific [Iterator] extensions
+pub(crate) trait FormattedIterExt {
+    /// Converts every item to an object that knows how to format it.
+    fn formatted<Context>(self) -> FormattedIter<Self, Self::Item, Context>
+    where
+        Self: Iterator + Sized,
+        Self::Item: IntoFormat<Context>,
+    {
+        FormattedIter {
+            inner: self,
+            options: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<I> FormattedIterExt for I where I: std::iter::Iterator {}
+
+pub(crate) struct FormattedIter<Iter, Item, Context>
+where
+    Iter: Iterator<Item = Item>,
+{
+    inner: Iter,
+    options: std::marker::PhantomData<Context>,
+}
+
+impl<Iter, Item, Context> std::iter::Iterator for FormattedIter<Iter, Item, Context>
+where
+    Iter: Iterator<Item = Item>,
+    Item: IntoFormat<Context>,
+{
+    type Item = Item::Format;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(self.inner.next()?.into_format())
+    }
+}
+
+impl<Iter, Item, Context> std::iter::FusedIterator for FormattedIter<Iter, Item, Context>
+where
+    Iter: std::iter::FusedIterator<Item = Item>,
+    Item: IntoFormat<Context>,
+{
+}
+
+impl<Iter, Item, Context> std::iter::ExactSizeIterator for FormattedIter<Iter, Item, Context>
+where
+    Iter: Iterator<Item = Item> + std::iter::ExactSizeIterator,
+    Item: IntoFormat<Context>,
+{
+}
+
+pub(crate) type JsFormatter<'buf> = Formatter<'buf, JsFormatContext>;
+
+/// Rule for formatting a JavaScript [AstNode].
+pub(crate) trait FormatNodeRule<N>
+where
+    N: AstNode<Language = JsLanguage>,
+{
+    fn fmt(&self, node: &N, f: &mut JsFormatter) -> FormatResult<()> {
+        if self.is_suppressed(node, f) {
+            return write!(f, [format_suppressed_node(node.syntax())]);
+        }
+
+        self.fmt_leading_comments(node, f)?;
+        self.fmt_node(node, f)?;
+        self.fmt_dangling_comments(node, f)?;
+        self.fmt_trailing_comments(node, f)
+    }
+
+    /// Formats the node without comments. Ignores any suppression comments.
+    fn fmt_node(&self, node: &N, f: &mut JsFormatter) -> FormatResult<()> {
+        let needs_parentheses = self.needs_parentheses(node);
+
+        if needs_parentheses {
+            write!(f, [text("(")])?;
+        }
+
+        self.fmt_fields(node, f)?;
+
+        if needs_parentheses {
+            write!(f, [text(")")])?;
+        }
+
+        Ok(())
+    }
+
+    /// Formats the node's fields.
+    fn fmt_fields(&self, item: &N, f: &mut JsFormatter) -> FormatResult<()>;
+
+    /// Returns whether the node requires parens.
+    fn needs_parentheses(&self, item: &N) -> bool {
+        let _ = item;
+        false
+    }
+
+    /// Returns `true` if the node has a suppression comment and should use the same formatting as in the source document.
+    fn is_suppressed(&self, node: &N, f: &JsFormatter) -> bool {
+        f.context().comments().is_suppressed(node.syntax())
+    }
+
+    /// Formats the [leading comments](rome_formatter::comments#leading-comments) of the node.
+    ///
+    /// You may want to override this method if you want to manually handle the formatting of comments
+    /// inside of the `fmt_fields` method or customize the formatting of the leading comments.
+    fn fmt_leading_comments(&self, node: &N, f: &mut JsFormatter) -> FormatResult<()> {
+        format_leading_comments(node.syntax()).fmt(f)
+    }
+
+    /// Formats the [dangling comments](rome_formatter::comments#dangling-comments) of the node.
+    ///
+    /// You should override this method if the node handled by this rule can have dangling comments because the
+    /// default implementation formats the dangling comments at the end of the node, which isn't ideal but ensures that
+    /// no comments are dropped.
+    ///
+    /// A node can have dangling comments if all its children are tokens or if all node childrens are optional.
+    fn fmt_dangling_comments(&self, node: &N, f: &mut JsFormatter) -> FormatResult<()> {
+        format_dangling_comments(node.syntax())
+            .with_soft_block_indent()
+            .fmt(f)
+    }
+
+    /// Formats the [trailing comments](rome_formatter::comments#trailing-comments) of the node.
+    ///
+    /// You may want to override this method if you want to manually handle the formatting of comments
+    /// inside of the `fmt_fields` method or customize the formatting of the trailing comments.
+    fn fmt_trailing_comments(&self, node: &N, f: &mut JsFormatter) -> FormatResult<()> {
+        format_trailing_comments(node.syntax()).fmt(f)
+    }
+}
+
+/// Rule for formatting an bogus node.
+pub(crate) trait FormatBogusNodeRule<N>
+where
+    N: AstNode<Language = JsLanguage>,
+{
+    fn fmt(&self, node: &N, f: &mut JsFormatter) -> FormatResult<()> {
+        format_bogus_node(node.syntax()).fmt(f)
+    }
+}
+
+/// Format implementation specific to JavaScript tokens.
+pub(crate) type FormatJsSyntaxToken = FormatToken<JsFormatContext>;
+
+impl AsFormat<JsFormatContext> for JsSyntaxToken {
+    type Format<'a> = FormatRefWithRule<'a, JsSyntaxToken, FormatJsSyntaxToken>;
+
+    fn format(&self) -> Self::Format<'_> {
+        FormatRefWithRule::new(self, FormatJsSyntaxToken::default())
+    }
+}
+
+impl IntoFormat<JsFormatContext> for JsSyntaxToken {
+    type Format = FormatOwnedWithRule<JsSyntaxToken, FormatJsSyntaxToken>;
+
+    fn into_format(self) -> Self::Format {
+        FormatOwnedWithRule::new(self, FormatJsSyntaxToken::default())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct JsFormatLanguage {
+    options: JsFormatOptions,
+}
+impl JsFormatLanguage {
+    pub fn new(options: JsFormatOptions) -> Self {
+        Self { options }
+    }
+}
+
+impl FormatLanguage for JsFormatLanguage {
+    type SyntaxLanguage = JsLanguage;
+    type Context = JsFormatContext;
+    type FormatRule = FormatJsSyntaxNode;
+
+    fn transform(
+        &self,
+        root: &SyntaxNode<Self::SyntaxLanguage>,
+    ) -> Option<(SyntaxNode<Self::SyntaxLanguage>, TransformSourceMap)> {
+        Some(transform(root.clone()))
+    }
+
+    fn is_range_formatting_node(&self, node: &JsSyntaxNode) -> bool {
+        let kind = node.kind();
+
+        // Do not format variable declaration nodes, format the whole statement instead
+        if matches!(kind, JsSyntaxKind::JS_VARIABLE_DECLARATION) {
+            return false;
+        }
+
+        AnyJsStatement::can_cast(kind)
+            || AnyJsDeclaration::can_cast(kind)
+            || matches!(
+                kind,
+                JsSyntaxKind::JS_DIRECTIVE | JsSyntaxKind::JS_EXPORT | JsSyntaxKind::JS_IMPORT
+            )
+    }
+
+    fn options(&self) -> &JsFormatOptions {
+        &self.options
+    }
+
+    fn create_context(
+        self,
+        root: &JsSyntaxNode,
+        source_map: Option<TransformSourceMap>,
+    ) -> Self::Context {
+        let comments = Comments::from_node(root, &JsCommentStyle, source_map.as_ref());
+        JsFormatContext::new(self.options, comments).with_source_map(source_map)
+    }
 }
 
 /// Formats a range within a file, supported by Rome
 ///
 /// This runs a simple heuristic to determine the initial indentation
-/// level of the node based on the provided [FormatOptions], which
+/// level of the node based on the provided [JsFormatContext], which
 /// must match currently the current initial of the file. Additionally,
 /// because the reformatting happens only locally the resulting code
 /// will be indented with the same level as the original selection,
@@ -108,207 +507,63 @@ pub fn to_format_element(
 /// It returns a [Formatted] result with a range corresponding to the
 /// range of the input that was effectively overwritten by the formatter
 pub fn format_range(
-    options: FormatOptions,
+    options: JsFormatOptions,
     root: &JsSyntaxNode,
     range: TextRange,
-) -> FormatResult<Formatted> {
-    // Find the tokens corresponding to the start and end of the range
-    let start_token = root.token_at_offset(range.start());
-    let end_token = root.token_at_offset(range.end());
-
-    // If these tokens were not found this means either:
-    // 1. The input [SyntaxNode] was empty
-    // 2. The input node was not the root [SyntaxNode] of the file
-    // In the first case we can return an empty result immediately,
-    // otherwise default to the first and last tokens in the root node
-    let start_token = match start_token {
-        // If the start of the range lies between two tokens,
-        // start at the rightmost one
-        TokenAtOffset::Between(_, token) => token,
-        TokenAtOffset::Single(token) => token,
-        TokenAtOffset::None => match root.first_token() {
-            Some(token) => token,
-            // root node is empty
-            None => return Ok(Formatted::new_empty()),
-        },
-    };
-    let end_token = match end_token {
-        // If the end of the range lies between two tokens,
-        // end at the leftmost one
-        TokenAtOffset::Between(token, _) => token,
-        TokenAtOffset::Single(token) => token,
-        TokenAtOffset::None => match root.last_token() {
-            Some(token) => token,
-            // root node is empty
-            None => return Ok(Formatted::new_empty()),
-        },
-    };
-
-    // Find the lowest common ancestor node for the start and end token
-    // by building the path to the root node from both tokens and
-    // iterating along the two paths at once to find the first divergence
-    #[allow(clippy::needless_collect)]
-    let start_to_root: Vec<_> = start_token.ancestors().collect();
-    #[allow(clippy::needless_collect)]
-    let end_to_root: Vec<_> = end_token.ancestors().collect();
-
-    let common_root = start_to_root
-        .into_iter()
-        .rev()
-        .zip(end_to_root.into_iter().rev())
-        .map_while(|(lhs, rhs)| if lhs == rhs { Some(lhs) } else { None })
-        .last();
-
-    // Logically this should always return at least the root node,
-    // fallback to said node just in case
-    let common_root = common_root.as_ref().unwrap_or(root);
-
-    // Perform the actual formatting of the root node with
-    // an appropriate indentation level
-    let formatted = format_node(options, common_root)?;
-
-    // This finds the closest marker to the beginning of the source
-    // starting before or at said starting point, and the closest
-    // marker to the end of the source range starting after or at
-    // said ending point respectively
-    let mut range_start = None;
-    let mut range_end = None;
-
-    let sourcemap = Vec::from(formatted.sourcemap());
-    for marker in &sourcemap {
-        if let Some(start_dist) = marker.source.checked_sub(range.start()) {
-            range_start = match range_start {
-                Some((prev_marker, prev_dist)) => {
-                    if start_dist < prev_dist {
-                        Some((marker, start_dist))
-                    } else {
-                        Some((prev_marker, prev_dist))
-                    }
-                }
-                None => Some((marker, start_dist)),
-            }
-        }
-
-        if let Some(end_dist) = range.end().checked_sub(marker.source) {
-            range_end = match range_end {
-                Some((prev_marker, prev_dist)) => {
-                    if end_dist < prev_dist {
-                        Some((marker, end_dist))
-                    } else {
-                        Some((prev_marker, prev_dist))
-                    }
-                }
-                None => Some((marker, end_dist)),
-            }
-        }
-    }
-
-    // If no start or end were found, this means that the edge of the formatting
-    // range was near the edge of the input, and no marker were emitted before
-    // the start (or after the end) of the formatting range: in this case
-    // the start/end marker default to the start/end of the input
-    let (start_source, start_dest) = match range_start {
-        Some((start_marker, _)) => (start_marker.source, start_marker.dest),
-        None => (common_root.text_range().start(), TextSize::from(0)),
-    };
-    let (end_source, end_dest) = match range_end {
-        Some((end_marker, _)) => (end_marker.source, end_marker.dest),
-        None => (
-            common_root.text_range().end(),
-            TextSize::try_from(formatted.as_code().len()).expect("code length out of bounds"),
-        ),
-    };
-
-    let input_range = TextRange::new(start_source, end_source);
-    let output_range = TextRange::new(start_dest, end_dest);
-    let sourcemap = Vec::from(formatted.sourcemap());
-    let verbatim_ranges = Vec::from(formatted.verbatim_ranges());
-    let code = &formatted.into_code()[output_range];
-    Ok(Formatted::new(
-        code.into(),
-        Some(input_range),
-        sourcemap,
-        verbatim_ranges,
-    ))
+) -> FormatResult<Printed> {
+    rome_formatter::format_range(root, range, JsFormatLanguage::new(options))
 }
 
-/// Formats a single node within a file, supported by Rome
+/// Formats a JavaScript (and its super languages) file based on its features.
+///
+/// It returns a [Formatted] result, which the user can use to override a file.
+pub fn format_node(
+    options: JsFormatOptions,
+    root: &JsSyntaxNode,
+) -> FormatResult<Formatted<JsFormatContext>> {
+    rome_formatter::format_node(root, JsFormatLanguage::new(options))
+}
+
+/// Formats a single node within a file, supported by Rome.
 ///
 /// This runs a simple heuristic to determine the initial indentation
-/// level of the node based on the provided [FormatOptions], which
+/// level of the node based on the provided [JsFormatContext], which
 /// must match currently the current initial of the file. Additionally,
 /// because the reformatting happens only locally the resulting code
 /// will be indented with the same level as the original selection,
 /// even if it's a mismatch from the rest of the block the selection is in
 ///
 /// It returns a [Formatted] result
-pub fn format_node(options: FormatOptions, root: &JsSyntaxNode) -> FormatResult<Formatted> {
-    // Determine the initial indentation level for the printer by inspecting the trivias
-    // of each token from the first token of the common root towards the start of the file
-    let mut tokens = std::iter::successors(root.first_token(), |token| token.prev_token());
+pub fn format_sub_tree(options: JsFormatOptions, root: &JsSyntaxNode) -> FormatResult<Printed> {
+    rome_formatter::format_sub_tree(root, JsFormatLanguage::new(options))
+}
 
-    // From the iterator of tokens, build an iterator of trivia pieces (once again the iterator is
-    // reversed, starting from the last trailing trivia towards the first leading trivia).
-    // The first token is handled specially as we only wan to consider its leading trivias
-    let first_token = tokens.next();
-    let first_token_trivias = first_token
-        .into_iter()
-        .flat_map(|token| token.leading_trivia().pieces().rev());
+#[derive(Copy, Clone, Debug)]
+pub(crate) enum JsLabels {
+    MemberChain,
+}
 
-    let next_tokens_trivias = tokens.flat_map(|token| {
-        token
-            .trailing_trivia()
-            .pieces()
-            .rev()
-            .chain(token.leading_trivia().pieces().rev())
-    });
+impl Label for JsLabels {
+    fn id(&self) -> u64 {
+        *self as u64
+    }
 
-    let trivias = first_token_trivias
-        .chain(next_tokens_trivias)
-        .filter(|piece| {
-            // We're only interested in newline and whitespace trivias, skip over comments
-            let is_newline = piece.is_newline();
-            let is_whitespace = piece.is_whitespace();
-            is_newline || is_whitespace
-        });
-
-    // Finally run the iterator until a newline trivia is found, and get the last whitespace trivia before it
-    let last_whitespace = trivias.map_while(|piece| piece.as_whitespace()).last();
-    let initial_indent = match last_whitespace {
-        Some(trivia) => {
-            // This logic is based on the formatting options passed in
-            // the be user (or the editor) as we do not have any kind
-            // of indentation type detection yet. Unfortunately this
-            // may not actually match the current content of the file
-            let length = trivia.text().len() as u16;
-            match options.indent_style {
-                IndentStyle::Tab => length,
-                IndentStyle::Space(width) => length / u16::from(width),
-            }
+    fn debug_name(&self) -> &'static str {
+        match self {
+            JsLabels::MemberChain => "MemberChain",
         }
-        // No whitespace was found between the start of the range
-        // and the start of the file
-        None => 0,
-    };
-
-    let element = Formatter::new(options).format_root(root)?;
-    let formatted = Printer::new(options).print_with_indent(&element, initial_indent);
-    let sourcemap = Vec::from(formatted.sourcemap());
-    let verbatim_ranges = Vec::from(formatted.verbatim_ranges());
-    Ok(Formatted::new(
-        formatted.into_code(),
-        Some(root.text_range()),
-        sourcemap,
-        verbatim_ranges,
-    ))
+    }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use super::{format_range, FormatOptions};
-    use crate::IndentStyle;
-    use rome_js_parser::parse_script;
+    use super::format_range;
+
+    use crate::context::JsFormatOptions;
+    use rome_formatter::IndentStyle;
+    use rome_js_parser::{parse, parse_script, JsParserOptions};
+    use rome_js_syntax::JsFileSource;
     use rome_rowan::{TextRange, TextSize};
 
     #[test]
@@ -341,24 +596,25 @@ while(
         let range_start = TextSize::try_from(input.find("let").unwrap() - 2).unwrap();
         let range_end = TextSize::try_from(input.find("const").unwrap()).unwrap();
 
-        let tree = parse_script(input, 0);
+        let tree = parse_script(input, JsParserOptions::default());
         let result = format_range(
-            FormatOptions {
-                indent_style: IndentStyle::Space(4),
-                ..FormatOptions::default()
-            },
+            JsFormatOptions::new(JsFileSource::js_script())
+                .with_indent_style(IndentStyle::Space(4)),
             &tree.syntax(),
             TextRange::new(range_start, range_end),
         );
 
         let result = result.expect("range formatting failed");
         assert_eq!(
-            result.range(),
-            Some(TextRange::new(range_start + TextSize::from(2), range_end))
+            result.as_code(),
+            "function func() {\n        func(/* comment */);\n\n        let array = [1, 2];\n    }\n\n    function func2() {\n        const no_format = () => {};\n    }"
         );
         assert_eq!(
-            result.as_code(),
-            "let array = [1, 2];\n    }\n\n    function func2() {\n        "
+            result.range(),
+            Some(TextRange::new(
+                range_start - TextSize::from(56),
+                range_end + TextSize::from(40)
+            ))
         );
     }
 
@@ -373,57 +629,124 @@ function() {
         let range_start = TextSize::try_from(input.find("const").unwrap()).unwrap();
         let range_end = TextSize::try_from(input.find('}').unwrap()).unwrap();
 
-        let tree = parse_script(input, 0);
+        let tree = parse_script(input, JsParserOptions::default());
         let result = format_range(
-            FormatOptions {
-                indent_style: IndentStyle::Space(4),
-                ..FormatOptions::default()
-            },
+            JsFormatOptions::new(JsFileSource::js_script())
+                .with_indent_style(IndentStyle::Space(4)),
             &tree.syntax(),
             TextRange::new(range_start, range_end),
         );
 
         let result = result.expect("range formatting failed");
-        assert_eq!(result.range(), Some(TextRange::new(range_start, range_end)));
         // As a result of the indentation normalization, the number of spaces within
         // the object expression is currently rounded down from an odd indentation level
         assert_eq!(
             result.as_code(),
-            "const veryLongIdentifierToCauseALineBreak = {\n            veryLongKeyToCauseALineBreak: \"veryLongValueToCauseALineBreak\",\n        "
+            "const veryLongIdentifierToCauseALineBreak = {\n            veryLongKeyToCauseALineBreak: \"veryLongValueToCauseALineBreak\",\n        };"
+        );
+        assert_eq!(
+            result.range(),
+            Some(TextRange::new(range_start, range_end + TextSize::from(1)))
         );
     }
-}
-
-#[cfg(test)]
-mod check_reformat;
-
-#[cfg(test)]
-mod test {
-    use crate::check_reformat::{check_reformat, CheckReformatParams};
-    use crate::format;
-    use crate::FormatOptions;
-    use rome_js_parser::{parse, SourceType};
 
     #[test]
-    // use this test check if your snippet prints as you wish, without using a snapshot
-    fn quick_test() {
-        let src = r#"
-a + b * c > 65 + 5;
+    fn test_range_formatting_whitespace() {
+        let input = "               ";
+
+        let range_start = TextSize::from(5);
+        let range_end = TextSize::from(5);
+
+        let tree = parse_script(input, JsParserOptions::default());
+        let result = format_range(
+            JsFormatOptions::new(JsFileSource::js_script())
+                .with_indent_style(IndentStyle::Space(4)),
+            &tree.syntax(),
+            TextRange::new(range_start, range_end),
+        );
+
+        let result = result.expect("range formatting failed");
+        assert_eq!(result.as_code(), "");
+        assert_eq!(result.range(), Some(TextRange::new(range_start, range_end)));
+    }
+
+    #[test]
+    fn test_range_formatting_middle_of_token() {
+        let input = r#"/* */ function Foo(){
+/**/
+}
 "#;
-        let syntax = SourceType::tsx();
-        let tree = parse(src, 0, syntax.clone());
-        let result = format(FormatOptions::default(), &tree.syntax()).unwrap();
-        check_reformat(CheckReformatParams {
-            root: &tree.syntax(),
-            text: result.as_code(),
-            source_type: syntax,
-            file_name: "quick_test",
-            format_options: FormatOptions::default(),
-        });
+
+        let range = TextRange::new(TextSize::from(16), TextSize::from(28));
+
+        debug_assert_eq!(
+            &input[range],
+            r#"oo(){
+/**/
+}"#
+        );
+
+        let tree = parse_script(input, JsParserOptions::default());
+        let result = format_range(
+            JsFormatOptions::new(JsFileSource::js_script())
+                .with_indent_style(IndentStyle::Space(4)),
+            &tree.syntax(),
+            range,
+        )
+        .expect("Range formatting failed");
+
         assert_eq!(
             result.as_code(),
-            r#"(a + (b * c)) > (65 + 5);
-"#
+            r#"/* */ function Foo() {
+    /**/
+}"#
         );
+        assert_eq!(
+            result.range(),
+            Some(TextRange::new(TextSize::from(0), TextSize::from(28)))
+        )
+    }
+
+    #[test]
+    fn range_formatting_trailing_comments() {
+        let input = r#"let fn =a((x ) => {
+          quux (); //
+        });
+"#;
+
+        let range = TextRange::new(TextSize::from(28), TextSize::from(41));
+
+        debug_assert_eq!(&input[range], r#"  quux (); //"#);
+
+        let tree = parse_script(input, JsParserOptions::default());
+        let result = format_range(
+            JsFormatOptions::new(JsFileSource::js_script())
+                .with_indent_style(IndentStyle::Space(4)),
+            &tree.syntax(),
+            range,
+        )
+        .expect("Range formatting failed");
+
+        assert_eq!(result.as_code(), r#"quux(); //"#);
+        assert_eq!(
+            result.range(),
+            Some(TextRange::new(TextSize::from(30), TextSize::from(41)))
+        )
+    }
+
+    #[test]
+    fn format_range_out_of_bounds() {
+        let src = "statement();";
+
+        let syntax = JsFileSource::js_module();
+        let tree = parse(src, syntax, JsParserOptions::default());
+
+        let result = format_range(
+            JsFormatOptions::new(syntax),
+            &tree.syntax(),
+            TextRange::new(TextSize::from(0), TextSize::of(src) + TextSize::from(5)),
+        );
+
+        assert!(result.is_err());
     }
 }

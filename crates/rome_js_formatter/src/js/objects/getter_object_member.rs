@@ -1,15 +1,14 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
+use crate::prelude::*;
 
-use crate::{
-    format_elements, hard_group_elements, space_token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
-
+use rome_formatter::write;
 use rome_js_syntax::JsGetterObjectMember;
 use rome_js_syntax::JsGetterObjectMemberFields;
 
-impl ToFormatElement for JsGetterObjectMember {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsGetterObjectMember;
+
+impl FormatNodeRule<JsGetterObjectMember> for FormatJsGetterObjectMember {
+    fn fmt_fields(&self, node: &JsGetterObjectMember, f: &mut JsFormatter) -> FormatResult<()> {
         let JsGetterObjectMemberFields {
             get_token,
             name,
@@ -17,17 +16,20 @@ impl ToFormatElement for JsGetterObjectMember {
             r_paren_token,
             return_type,
             body,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(hard_group_elements(format_elements![
-            get_token.format(formatter)?,
-            space_token(),
-            name.format(formatter)?,
-            l_paren_token.format(formatter)?,
-            r_paren_token.format(formatter)?,
-            return_type.format_or_empty(formatter)?,
-            space_token(),
-            body.format(formatter)?
-        ]))
+        write![
+            f,
+            [
+                get_token.format(),
+                space(),
+                name.format(),
+                l_paren_token.format(),
+                r_paren_token.format(),
+                return_type.format(),
+                space(),
+                body.format()
+            ]
+        ]
     }
 }

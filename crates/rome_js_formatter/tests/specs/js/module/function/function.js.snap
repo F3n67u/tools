@@ -1,8 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/spec_test.rs
-expression: function.js
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: js/module/function/function.js
 ---
+
 # Input
+
+```js
 function foo() {
 }
 async function foo(a) {
@@ -36,14 +39,27 @@ function directives() {
   "use strict";
 }
 
+```
+
+
 =============================
+
 # Outputs
+
 ## Output 1
+
 -----
 Indent style: Tab
 Line width: 80
 Quote style: Double Quotes
+JSX quote style: Double Quotes
+Quote properties: As needed
+Trailing comma: All
+Semicolons: Always
+Arrow parentheses: Always
 -----
+
+```js
 function foo() {}
 async function foo(a) {
 	await x;
@@ -74,4 +90,6 @@ function foo() {
 function directives() {
 	"use strict";
 }
+```
+
 

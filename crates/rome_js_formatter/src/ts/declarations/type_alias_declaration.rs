@@ -1,41 +1,24 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::utils::format_with_semicolon;
-use crate::{
-    format_elements, hard_group_elements, space_token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
-use rome_js_syntax::{TsTypeAliasDeclaration, TsTypeAliasDeclarationFields};
+use crate::prelude::*;
+use crate::utils::{AnyJsAssignmentLike, FormatStatementSemicolon};
+use rome_formatter::write;
+use rome_js_syntax::TsTypeAliasDeclaration;
 
-impl ToFormatElement for TsTypeAliasDeclaration {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let TsTypeAliasDeclarationFields {
-            type_token,
-            binding_identifier,
-            type_parameters,
-            eq_token,
-            ty,
-            semicolon_token,
-        } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsTypeAliasDeclaration;
 
-        let type_token = type_token.format(formatter)?;
-        let binding_identifier = binding_identifier.format(formatter)?;
-        let type_parameters = type_parameters.format_or_empty(formatter)?;
-        let equal_token = eq_token.format(formatter)?;
-        let ty = ty.format(formatter)?;
-
-        Ok(hard_group_elements(format_with_semicolon(
-            formatter,
-            format_elements![
-                type_token,
-                space_token(),
-                binding_identifier,
-                type_parameters,
-                space_token(),
-                equal_token,
-                space_token(),
-                ty,
-            ],
-            semicolon_token,
-        )?))
+impl FormatNodeRule<TsTypeAliasDeclaration> for FormatTsTypeAliasDeclaration {
+    fn fmt_fields(&self, node: &TsTypeAliasDeclaration, f: &mut JsFormatter) -> FormatResult<()> {
+        let type_token = node.type_token()?;
+        let semicolon = node.semicolon_token();
+        let assignment_like = format_with(|f| write!(f, [AnyJsAssignmentLike::from(node.clone())]));
+        write!(
+            f,
+            [
+                type_token.format(),
+                space(),
+                group(&assignment_like),
+                FormatStatementSemicolon::new(semicolon.as_ref())
+            ]
+        )
     }
 }

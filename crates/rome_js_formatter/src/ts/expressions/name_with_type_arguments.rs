@@ -1,16 +1,18 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::{TsNameWithTypeArguments, TsNameWithTypeArgumentsFields};
 
-impl ToFormatElement for TsNameWithTypeArguments {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsNameWithTypeArguments;
+
+impl FormatNodeRule<TsNameWithTypeArguments> for FormatTsNameWithTypeArguments {
+    fn fmt_fields(&self, node: &TsNameWithTypeArguments, f: &mut JsFormatter) -> FormatResult<()> {
         let TsNameWithTypeArgumentsFields {
             name,
             type_arguments,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let name = name.format(formatter)?;
-        let type_arguments = type_arguments.format_or_empty(formatter)?;
-        Ok(format_elements![name, type_arguments])
+        write![f, [name.format(), type_arguments.format()]]
     }
 }

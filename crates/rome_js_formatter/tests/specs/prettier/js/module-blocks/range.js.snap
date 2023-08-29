@@ -1,10 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 144
-expression: range.js
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/module-blocks/range.js
 ---
+
 # Input
+
 ```js
 let moduleBlock = module {  export let y = 1;
 };
@@ -13,67 +14,146 @@ foo(module { export let foo = "foo"; })
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,7 +1,5 @@
+ let moduleBlock = module {
+   export let y = 1;
+-};
++}
+ 
+-foo(module {
+-  export let foo = "foo";
+-});
++foo(module { export let foo = "foo"; })
+```
+
 # Output
+
 ```js
-let moduleBlock = module {  export let y = 1;
+let moduleBlock = module {
+  export let y = 1;
 }
 
 foo(module { export let foo = "foo"; })
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: Expected a semicolon or an implicit semicolon after a statement, but found none
-  ┌─ range.js:1:26
-  │
-1 │ let moduleBlock = module {  export let y = 1;
-  │ -------------------------^ An explicit or implicit semicolon is expected here...
-  │ │                         
-  │ ...Which is required to end this statement
+range.js:1:26 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Illegal use of an export declaration not at the top level
-  ┌─ range.js:1:29
-  │
-1 │ let moduleBlock = module {  export let y = 1;
-  │                             ^^^^^^^^^^^^^^^^^ move this declaration to the top level
+  × Expected a semicolon or an implicit semicolon after a statement, but found none
+  
+  > 1 │ let moduleBlock = module {  export let y = 1;
+      │                          ^
+    2 │ };
+    3 │ 
+  
+  i An explicit or implicit semicolon is expected here...
+  
+  > 1 │ let moduleBlock = module {  export let y = 1;
+      │                          ^
+    2 │ };
+    3 │ 
+  
+  i ...Which is required to end this statement
+  
+  > 1 │ let moduleBlock = module {  export let y = 1;
+      │ ^^^^^^^^^^^^^^^^^^^^^^^^^
+    2 │ };
+    3 │ 
+  
+range.js:1:29 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `,` but instead found `{`
-  ┌─ range.js:4:12
-  │
-4 │ foo(module { export let foo = "foo"; })
-  │            ^ unexpected
+  × Illegal use of an export declaration not at the top level
+  
+  > 1 │ let moduleBlock = module {  export let y = 1;
+      │                             ^^^^^^^^^^^^^^^^^
+    2 │ };
+    3 │ 
+  
+  i move this declaration to the top level
+  
+range.js:4:12 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `:` but instead found `let`
-  ┌─ range.js:4:21
-  │
-4 │ foo(module { export let foo = "foo"; })
-  │                     ^^^ unexpected
+  × expected `,` but instead found `{`
+  
+    2 │ };
+    3 │ 
+  > 4 │ foo(module { export let foo = "foo"; })
+      │            ^
+    5 │ 
+  
+  i Remove {
+  
+range.js:4:21 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `,` but instead found `foo`
-  ┌─ range.js:4:25
-  │
-4 │ foo(module { export let foo = "foo"; })
-  │                         ^^^ unexpected
+  × expected `:` but instead found `let`
+  
+    2 │ };
+    3 │ 
+  > 4 │ foo(module { export let foo = "foo"; })
+      │                     ^^^
+    5 │ 
+  
+  i Remove let
+  
+range.js:4:25 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Did you mean to use a `:`? An `=` can only follow a property name when the containing object literal is part of a destructuring pattern.
-  ┌─ range.js:4:29
-  │
-4 │ foo(module { export let foo = "foo"; })
-  │                             ^
+  × expected `,` but instead found `foo`
+  
+    2 │ };
+    3 │ 
+  > 4 │ foo(module { export let foo = "foo"; })
+      │                         ^^^
+    5 │ 
+  
+  i Remove foo
+  
+range.js:4:29 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `,` but instead found `;`
-  ┌─ range.js:4:36
-  │
-4 │ foo(module { export let foo = "foo"; })
-  │                                    ^ unexpected
+  × Did you mean to use a `:`? An `=` can only follow a property name when the containing object literal is part of a destructuring pattern.
+  
+    2 │ };
+    3 │ 
+  > 4 │ foo(module { export let foo = "foo"; })
+      │                             ^
+    5 │ 
+  
+range.js:4:36 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '})'
-  ┌─ range.js:4:38
-  │
-4 │ foo(module { export let foo = "foo"; })
-  │                                      ^^ Expected a statement here
+  × expected `,` but instead found `;`
+  
+    2 │ };
+    3 │ 
+  > 4 │ foo(module { export let foo = "foo"; })
+      │                                    ^
+    5 │ 
+  
+  i Remove ;
+  
+range.js:4:38 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected a statement but instead found '})'
+  
+    2 │ };
+    3 │ 
+  > 4 │ foo(module { export let foo = "foo"; })
+      │                                      ^^
+    5 │ 
+  
+  i Expected a statement here
+  
+    2 │ };
+    3 │ 
+  > 4 │ foo(module { export let foo = "foo"; })
+      │                                      ^^
+    5 │ 
+  
 
 ```
 

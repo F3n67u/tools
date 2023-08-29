@@ -1,12 +1,14 @@
-use crate::utils::sort_modifiers_by_precedence;
-use crate::{join_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+use crate::utils::format_modifiers::FormatModifiers;
 use rome_js_syntax::TsPropertySignatureModifierList;
 
-impl ToFormatElement for TsPropertySignatureModifierList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(join_elements(
-            space_token(),
-            formatter.format_nodes(sort_modifiers_by_precedence(self))?,
-        ))
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsPropertySignatureModifierList;
+
+impl FormatRule<TsPropertySignatureModifierList> for FormatTsPropertySignatureModifierList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &TsPropertySignatureModifierList, f: &mut JsFormatter) -> FormatResult<()> {
+        FormatModifiers::from(node.clone()).fmt(f)
     }
 }

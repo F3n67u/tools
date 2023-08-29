@@ -1,19 +1,31 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 57
-expression: binary_and_template.js
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/export-default/binary_and_template.js
 ---
+
 # Input
+
 ```js
 export default (function() {} + foo)``;
 
 ```
 
-# Output
-```js
-export default (function () {} + foo)``;
 
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1 +1 @@
+-export default (function () {} + foo)``;
++export default ((function () {}) + foo)``;
+```
+
+# Output
+
+```js
+export default ((function () {}) + foo)``;
 ```
 
 

@@ -1,8 +1,8 @@
 use crate::cursor::{SyntaxNode, SyntaxToken};
-use crate::green::GreenElementRef;
+use crate::green::{GreenElement, GreenElementRef};
 use crate::{NodeOrToken, RawSyntaxKind, TokenAtOffset};
+use rome_text_size::{TextRange, TextSize};
 use std::iter;
-use text_size::{TextRange, TextSize};
 
 pub(crate) type SyntaxElement = NodeOrToken<SyntaxNode, SyntaxToken>;
 
@@ -14,12 +14,8 @@ impl SyntaxElement {
         offset: TextSize,
     ) -> SyntaxElement {
         match element {
-            NodeOrToken::Node(node) => {
-                SyntaxNode::new_child(node, parent, slot as u32, offset).into()
-            }
-            NodeOrToken::Token(token) => {
-                SyntaxToken::new(token, parent, slot as u32, offset).into()
-            }
+            NodeOrToken::Node(node) => SyntaxNode::new_child(node, parent, slot, offset).into(),
+            NodeOrToken::Token(token) => SyntaxToken::new(token, parent, slot, offset).into(),
         }
     }
 
@@ -98,10 +94,18 @@ impl SyntaxElement {
         }
     }
 
-    pub fn detach(&self) {
+    #[must_use = "syntax elements are immutable, the result of update methods must be propagated to have any effect"]
+    pub fn detach(self) -> Self {
         match self {
-            NodeOrToken::Node(it) => it.detach(),
-            NodeOrToken::Token(it) => it.detach(),
+            NodeOrToken::Node(it) => Self::Node(it.detach()),
+            NodeOrToken::Token(it) => Self::Token(it.detach()),
+        }
+    }
+
+    pub(crate) fn into_green(self) -> GreenElement {
+        match self {
+            NodeOrToken::Node(it) => it.ptr.into_green(),
+            NodeOrToken::Token(it) => it.into_green(),
         }
     }
 }

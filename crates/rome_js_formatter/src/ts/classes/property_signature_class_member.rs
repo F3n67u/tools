@@ -1,31 +1,31 @@
-use crate::utils::format_with_semicolon;
-use crate::{
-    format_elements,
-    formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode},
-    space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
+use crate::js::classes::property_class_member::{
+    AnyJsPropertyClassMember, FormatClassPropertySemicolon,
 };
-use rome_js_syntax::{TsPropertySignatureClassMember, TsPropertySignatureClassMemberFields};
+use crate::prelude::*;
+use crate::utils::AnyJsAssignmentLike;
+use rome_formatter::write;
+use rome_js_syntax::TsPropertySignatureClassMember;
 
-impl ToFormatElement for TsPropertySignatureClassMember {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let TsPropertySignatureClassMemberFields {
-            modifiers,
-            name,
-            property_annotation,
-            semicolon_token,
-        } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsPropertySignatureClassMember;
 
-        let property_annotation = property_annotation.format_or_empty(formatter)?;
+impl FormatNodeRule<TsPropertySignatureClassMember> for FormatTsPropertySignatureClassMember {
+    fn fmt_fields(
+        &self,
+        node: &TsPropertySignatureClassMember,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        let semicolon_token = node.semicolon_token();
 
-        format_with_semicolon(
-            formatter,
-            format_elements![
-                modifiers.format(formatter)?,
-                space_token(),
-                name.format(formatter)?,
-                property_annotation,
-            ],
-            semicolon_token,
+        write!(
+            f,
+            [
+                AnyJsAssignmentLike::from(node.clone()),
+                FormatClassPropertySemicolon::new(
+                    &AnyJsPropertyClassMember::from(node.clone()),
+                    semicolon_token.as_ref()
+                )
+            ]
         )
     }
 }

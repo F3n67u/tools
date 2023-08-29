@@ -1,9 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-expression: method_types.ts
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: typescript/comments/method_types.ts
 ---
+
 # Input
-```js
+
+```ts
 interface foo1 {
   bar3/* foo */ (/* baz */) // bat
   bar/* foo */ ? /* bar */ (/* baz */) /* bat */;
@@ -46,48 +48,95 @@ abstract class Test {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,11 +1,11 @@
+ interface foo1 {
+   bar3 /* foo */(/* baz */); // bat
+-  bar /* foo */ /* bar */?(/* baz */) /* bat */;
++  bar /* foo */?/* bar */ (/* baz */) /* bat */;
+   bar2 /* foo */(/* baz */) /* bat */;
+ }
+ 
+ interface foo2 {
+-  bar /* foo */?(/* bar */ bar: /* baz */ string): /* bat */ string;
++  bar /* foo */?/* bar */ (bar: /* baz */ string): /* bat */ string;
+ }
+ 
+ interface foo3 {
+@@ -17,20 +17,20 @@
+ }
+ 
+ interface foo5 {
+-  /* foo */ new (/* bar */ a: /* baz */ string): /* bat */ string;
++  /* foo */ new /* bar */ (a: /* baz */ string): /* bat */ string;
+ }
+ 
+ interface foo6 {
+-  /* foo */ new (/* baz */) /* bar */ : /* bat */ string;
++  /* foo */ new /* bar */ (/* baz */): /* bat */ string;
+ }
+ 
+ type foo7 = /* foo */ (/* bar */) /* baz */ => void;
+ 
+ type foo8 = /* foo */ (a: /* bar */ string) /* baz */ => void;
+ 
+-let foo9: new (/* bar */) /* foo */ /* baz */ => string;
++let foo9: new /* foo */ (/* bar */) /* baz */ => string;
+ 
+-let foo10: new (/* foo */ a: /* bar */ string) /* baz */ => string;
++let foo10: new /* foo */ (a: /* bar */ string) /* baz */ => string;
+ 
+ abstract class Test {
+   abstract foo12 /* foo */(a: /* bar */ string): /* baz */ void;
+```
+
 # Output
-```js
+
+```ts
 interface foo1 {
-  bar3( /* baz */ ); /* foo */ // bat
-  bar?( /* baz */ ); /* foo */ /* bar */ /* bat */
-  bar2( /* baz */ ); /* foo */ /* bat */
+  bar3 /* foo */(/* baz */); // bat
+  bar /* foo */?/* bar */ (/* baz */) /* bat */;
+  bar2 /* foo */(/* baz */) /* bat */;
 }
 
 interface foo2 {
-  bar?(bar: /* baz */ string): string; /* foo */ /* bar */ /* bat */
+  bar /* foo */?/* bar */ (bar: /* baz */ string): /* bat */ string;
 }
 
 interface foo3 {
-  /* foo */ ( /* bar */ ): string; /* baz */
+  /* foo */ (/* bar */): /* baz */ string;
 }
 
 interface foo4 {
-  /* foo */ (bar: /* bar */ string): string; /* baz */
+  /* foo */ (bar: /* bar */ string): /* baz */ string;
 }
 
 interface foo5 {
-  /* foo */ new(a: /* baz */ string): string; /* bar */ /* bat */
+  /* foo */ new /* bar */ (a: /* baz */ string): /* bat */ string;
 }
 
 interface foo6 {
-  /* foo */ new( /* baz */ ): string; /* bar */ /* bat */
+  /* foo */ new /* bar */ (/* baz */): /* bat */ string;
 }
 
-type foo7 = /* foo */ ( /* bar */ ) /* baz */ => void;
+type foo7 = /* foo */ (/* bar */) /* baz */ => void;
 
 type foo8 = /* foo */ (a: /* bar */ string) /* baz */ => void;
 
-let foo9: new /* foo */ ( /* bar */ ) /* baz */ => string;
+let foo9: new /* foo */ (/* bar */) /* baz */ => string;
 
 let foo10: new /* foo */ (a: /* bar */ string) /* baz */ => string;
 
 abstract class Test {
-  abstract foo12 /* foo */ (a: /* bar */ string): /* baz */ void;
+  abstract foo12 /* foo */(a: /* bar */ string): /* baz */ void;
 
-  abstract foo13 /* foo */ ( /* bar */ ) /* baz */ ;
+  abstract foo13 /* foo */(/* bar */); /* baz */
 }
-
 ```
 
 

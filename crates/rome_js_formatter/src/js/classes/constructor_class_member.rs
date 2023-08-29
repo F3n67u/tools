@@ -1,29 +1,21 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{
-    format_elements, hard_group_elements, space_token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
-
+use crate::js::classes::method_class_member::FormatAnyJsMethodMember;
+use rome_formatter::write;
 use rome_js_syntax::JsConstructorClassMember;
-use rome_js_syntax::JsConstructorClassMemberFields;
 
-impl ToFormatElement for JsConstructorClassMember {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsConstructorClassMemberFields {
-            modifiers,
-            name,
-            parameters,
-            body,
-        } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsConstructorClassMember;
 
-        Ok(hard_group_elements(format_elements![
-            modifiers.format(formatter)?,
-            space_token(),
-            name.format(formatter)?,
-            parameters.format(formatter)?,
-            space_token(),
-            body.format(formatter)?
-        ]))
+impl FormatNodeRule<JsConstructorClassMember> for FormatJsConstructorClassMember {
+    fn fmt_fields(&self, node: &JsConstructorClassMember, f: &mut JsFormatter) -> FormatResult<()> {
+        write![
+            f,
+            [
+                node.modifiers().format(),
+                space(),
+                FormatAnyJsMethodMember::from(node.clone())
+            ]
+        ]
     }
 }

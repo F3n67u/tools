@@ -1,9 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-expression: importAliasIdentifiers.ts
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: typescript/conformance/internalModules/importDeclarations/importAliasIdentifiers.ts
 ---
+
 # Input
-```js
+
+```ts
 module moduleA {
     export class Point {
         constructor(public x: number, public y: number) { }
@@ -52,8 +54,28 @@ var p: fundule.Point;
 var p: { x: number; y: number; };
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,9 +1,6 @@
+ module moduleA {
+   export class Point {
+-    constructor(
+-      public x: number,
+-      public y: number,
+-    ) {}
++    constructor(public x: number, public y: number) {}
+   }
+ }
+ 
+```
+
 # Output
-```js
+
+```ts
 module moduleA {
   export class Point {
     constructor(public x: number, public y: number) {}
@@ -71,7 +93,10 @@ class clodule {
 }
 
 module clodule {
-  export interface Point { x: number; y: number }
+  export interface Point {
+    x: number;
+    y: number;
+  }
   var Point: Point = { x: 0, y: 0 };
 }
 
@@ -86,7 +111,10 @@ function fundule() {
 }
 
 module fundule {
-  export interface Point { x: number; y: number }
+  export interface Point {
+    x: number;
+    y: number;
+  }
   var Point: Point = { x: 0, y: 0 };
 }
 
@@ -95,7 +123,6 @@ import funlias = fundule;
 var p: funlias.Point;
 var p: fundule.Point;
 var p: { x: number; y: number };
-
 ```
 
 

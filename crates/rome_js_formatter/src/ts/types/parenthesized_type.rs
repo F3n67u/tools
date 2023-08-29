@@ -1,20 +1,40 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsParenthesizedType;
-use rome_js_syntax::TsParenthesizedTypeFields;
+use crate::prelude::*;
 
-impl ToFormatElement for TsParenthesizedType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::TsParenthesizedTypeFields;
+use rome_js_syntax::{JsSyntaxNode, TsParenthesizedType};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsParenthesizedType;
+
+impl FormatNodeRule<TsParenthesizedType> for FormatTsParenthesizedType {
+    fn fmt_fields(&self, node: &TsParenthesizedType, f: &mut JsFormatter) -> FormatResult<()> {
         let TsParenthesizedTypeFields {
             l_paren_token,
             ty,
             r_paren_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        formatter.format_delimited_soft_block_indent(
-            &l_paren_token?,
-            ty.format(formatter)?,
-            &r_paren_token?,
+        write!(
+            f,
+            [l_paren_token.format(), &ty.format(), r_paren_token.format()]
         )
+    }
+
+    fn needs_parentheses(&self, item: &TsParenthesizedType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsParenthesizedType {
+    #[inline]
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+
+    #[inline]
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

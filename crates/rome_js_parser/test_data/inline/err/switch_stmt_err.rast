@@ -36,7 +36,7 @@ JsModule {
                     test: missing (required),
                     colon_token: missing (required),
                     consequent: JsStatementList [
-                        JsUnknownStatement {
+                        JsBogusStatement {
                             items: [
                                 VAR_KW@33..37 "var" [] [Whitespace(" ")],
                                 IDENT@37..39 "i" [] [Whitespace(" ")],
@@ -61,7 +61,7 @@ JsModule {
                     test: missing (required),
                     colon_token: missing (required),
                     consequent: JsStatementList [
-                        JsUnknownStatement {
+                        JsBogusStatement {
                             items: [
                                 VAR_KW@54..58 "var" [] [Whitespace(" ")],
                                 IDENT@58..60 "i" [] [Whitespace(" ")],
@@ -113,7 +113,7 @@ JsModule {
                 },
                 JsCaseClause {
                     case_token: missing (required),
-                    test: JsUnknownExpression {
+                    test: JsBogusExpression {
                         items: [
                             DEFAULT_KW@110..120 "default" [Newline("\n"), Whitespace("  ")] [],
                         ],
@@ -188,7 +188,7 @@ JsModule {
           1: (empty)
           2: (empty)
           3: JS_STATEMENT_LIST@33..43
-            0: JS_UNKNOWN_STATEMENT@33..43
+            0: JS_BOGUS_STATEMENT@33..43
               0: VAR_KW@33..37 "var" [] [Whitespace(" ")]
               1: IDENT@37..39 "i" [] [Whitespace(" ")]
               2: EQ@39..41 "=" [] [Whitespace(" ")]
@@ -206,7 +206,7 @@ JsModule {
           1: (empty)
           2: (empty)
           3: JS_STATEMENT_LIST@54..65
-            0: JS_UNKNOWN_STATEMENT@54..65
+            0: JS_BOGUS_STATEMENT@54..65
               0: VAR_KW@54..58 "var" [] [Whitespace(" ")]
               1: IDENT@58..60 "i" [] [Whitespace(" ")]
               2: EQ@60..62 "=" [] [Whitespace(" ")]
@@ -242,7 +242,7 @@ JsModule {
               2: R_CURLY@109..110 "}" [] []
         1: JS_CASE_CLAUSE@110..124
           0: (empty)
-          1: JS_UNKNOWN_EXPRESSION@110..120
+          1: JS_BOGUS_EXPRESSION@110..120
             0: DEFAULT_KW@110..120 "default" [Newline("\n"), Whitespace("  ")] []
           2: COLON@120..122 ":" [] [Whitespace(" ")]
           3: JS_STATEMENT_LIST@122..124
@@ -268,70 +268,161 @@ JsModule {
       6: R_CURLY@149..150 "}" [] []
   3: EOF@150..151 "" [Newline("\n")] []
 --
-error[SyntaxError]: expected `'('` but instead found `foo`
-  ┌─ switch_stmt_err.js:1:8
-  │
-1 │ switch foo {}
-  │        ^^^ unexpected
+switch_stmt_err.js:1:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `(` but instead found `foo`
+  
+  > 1 │ switch foo {}
+      │        ^^^
+    2 │ switch {}
+    3 │ switch { var i = 0 }
+  
+  i Remove foo
+  
 --
-error[SyntaxError]: expected `')'` but instead found `{`
-  ┌─ switch_stmt_err.js:1:12
-  │
-1 │ switch foo {}
-  │            ^ unexpected
+switch_stmt_err.js:1:12 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `)` but instead found `{`
+  
+  > 1 │ switch foo {}
+      │            ^
+    2 │ switch {}
+    3 │ switch { var i = 0 }
+  
+  i Remove {
+  
 --
-error[SyntaxError]: expected `'('` but instead found `{`
-  ┌─ switch_stmt_err.js:2:8
-  │
-2 │ switch {}
-  │        ^ unexpected
+switch_stmt_err.js:2:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `(` but instead found `{`
+  
+    1 │ switch foo {}
+  > 2 │ switch {}
+      │        ^
+    3 │ switch { var i = 0 }
+    4 │ switch { var i = 0; case "bar": {} }
+  
+  i Remove {
+  
 --
-error[SyntaxError]: expected `'('` but instead found `{`
-  ┌─ switch_stmt_err.js:3:8
-  │
-3 │ switch { var i = 0 }
-  │        ^ unexpected
+switch_stmt_err.js:3:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `(` but instead found `{`
+  
+    1 │ switch foo {}
+    2 │ switch {}
+  > 3 │ switch { var i = 0 }
+      │        ^
+    4 │ switch { var i = 0; case "bar": {} }
+    5 │ switch (foo) {
+  
+  i Remove {
+  
 --
-error[SyntaxError]: expected a default, or a case but instead found 'var i = 0'
-  ┌─ switch_stmt_err.js:3:10
-  │
-3 │ switch { var i = 0 }
-  │          ^^^^^^^^^ Expected a default, or a case here
+switch_stmt_err.js:3:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected a default, or a case but instead found 'var i = 0'
+  
+    1 │ switch foo {}
+    2 │ switch {}
+  > 3 │ switch { var i = 0 }
+      │          ^^^^^^^^^
+    4 │ switch { var i = 0; case "bar": {} }
+    5 │ switch (foo) {
+  
+  i Expected a default, or a case here
+  
+    1 │ switch foo {}
+    2 │ switch {}
+  > 3 │ switch { var i = 0 }
+      │          ^^^^^^^^^
+    4 │ switch { var i = 0; case "bar": {} }
+    5 │ switch (foo) {
+  
 --
-error[SyntaxError]: expected `'('` but instead found `{`
-  ┌─ switch_stmt_err.js:4:8
-  │
-4 │ switch { var i = 0; case "bar": {} }
-  │        ^ unexpected
+switch_stmt_err.js:4:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `(` but instead found `{`
+  
+    2 │ switch {}
+    3 │ switch { var i = 0 }
+  > 4 │ switch { var i = 0; case "bar": {} }
+      │        ^
+    5 │ switch (foo) {
+    6 │   default: {}
+  
+  i Remove {
+  
 --
-error[SyntaxError]: expected a default, or a case but instead found 'var i = 0;'
-  ┌─ switch_stmt_err.js:4:10
-  │
-4 │ switch { var i = 0; case "bar": {} }
-  │          ^^^^^^^^^^ Expected a default, or a case here
+switch_stmt_err.js:4:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected a default, or a case but instead found 'var i = 0;'
+  
+    2 │ switch {}
+    3 │ switch { var i = 0 }
+  > 4 │ switch { var i = 0; case "bar": {} }
+      │          ^^^^^^^^^^
+    5 │ switch (foo) {
+    6 │   default: {}
+  
+  i Expected a default, or a case here
+  
+    2 │ switch {}
+    3 │ switch { var i = 0 }
+  > 4 │ switch { var i = 0; case "bar": {} }
+      │          ^^^^^^^^^^
+    5 │ switch (foo) {
+    6 │   default: {}
+  
 --
-error[SyntaxError]: Multiple default clauses inside of a switch statement are not allowed
-  ┌─ switch_stmt_err.js:7:3
-  │
-6 │   default: {}
-  │   ----------- the first default clause is defined here
-7 │   default: {}
-  │   ^^^^^^^^^^^ a second clause here is not allowed
+switch_stmt_err.js:7:3 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Multiple default clauses inside of a switch statement are not allowed
+  
+    5 │ switch (foo) {
+    6 │   default: {}
+  > 7 │   default: {}
+      │   ^^^^^^^^^^^
+    8 │ }
+    9 │ switch (foo) { case : }
+  
+  i a second clause here is not allowed
+  
+    5 │ switch (foo) {
+    6 │   default: {}
+  > 7 │   default: {}
+      │   ^^^^^^^^^^^
+    8 │ }
+    9 │ switch (foo) { case : }
+  
+  i the first default clause is defined here
+  
+    4 │ switch { var i = 0; case "bar": {} }
+    5 │ switch (foo) {
+  > 6 │   default: {}
+      │   ^^^^^^^^^^^
+    7 │   default: {}
+    8 │ }
+  
 --
-error[SyntaxError]: expected an expression but instead found ':'
-  ┌─ switch_stmt_err.js:9:21
-  │
-9 │ switch (foo) { case : }
-  │                     ^ Expected an expression here
+switch_stmt_err.js:9:21 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an expression but instead found ':'
+  
+     7 │   default: {}
+     8 │ }
+   > 9 │ switch (foo) { case : }
+       │                     ^
+    10 │ 
+  
+  i Expected an expression here
+  
+     7 │   default: {}
+     8 │ }
+   > 9 │ switch (foo) { case : }
+       │                     ^
+    10 │ 
+  
 --
 switch foo {}
 switch {}

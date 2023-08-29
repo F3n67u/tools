@@ -1,33 +1,63 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
+use rome_formatter::write;
 
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::utils::{FormatLiteralStringToken, StringLiteralParentKind};
 
-use crate::utils::format_string_literal_token;
 use rome_js_syntax::JsImportAssertionEntryFields;
 use rome_js_syntax::{JsImportAssertionEntry, JsSyntaxKind};
 
-impl ToFormatElement for JsImportAssertionEntry {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsImportAssertionEntry;
+
+impl FormatNodeRule<JsImportAssertionEntry> for FormatJsImportAssertionEntry {
+    fn fmt_fields(&self, node: &JsImportAssertionEntry, f: &mut JsFormatter) -> FormatResult<()> {
         let JsImportAssertionEntryFields {
             key,
             colon_token,
             value_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
         let key = key?;
 
-        let formatted_key = match key.kind() {
-            JsSyntaxKind::JS_STRING_LITERAL => format_string_literal_token(key, formatter),
-            _ => key.format(formatter)?,
+        match key.kind() {
+            JsSyntaxKind::JS_STRING_LITERAL => {
+                write!(
+                    f,
+                    [FormatLiteralStringToken::new(
+                        &key,
+                        StringLiteralParentKind::Expression
+                    )]
+                )?;
+            }
+            _ => {
+                write![f, [key.format()]]?;
+            }
         };
 
-        Ok(format_elements![
-            formatted_key,
-            colon_token.format(formatter)?,
-            space_token(),
-            format_string_literal_token(value_token?, formatter),
-        ])
+        write![f, [colon_token.format(), space()]]?;
+
+        if f.comments().has_dangling_comments(node.syntax()) {
+            write!(
+                f,
+                [space(), format_dangling_comments(node.syntax()), space()]
+            )?;
+        }
+
+        write!(
+            f,
+            [FormatLiteralStringToken::new(
+                &value_token?,
+                StringLiteralParentKind::Expression
+            )]
+        )
+    }
+
+    fn fmt_dangling_comments(
+        &self,
+        _: &JsImportAssertionEntry,
+        _: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        // Handled inside `fmt_fields`
+        Ok(())
     }
 }

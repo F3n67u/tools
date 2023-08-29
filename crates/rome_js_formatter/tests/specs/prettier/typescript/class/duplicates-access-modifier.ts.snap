@@ -1,11 +1,12 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 125
-expression: duplicates-access-modifier.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/class/duplicates-access-modifier.ts
 ---
+
 # Input
-```js
+
+```ts
 class Foo {
   public public a;
   private public b;
@@ -16,8 +17,30 @@ class Foo {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,7 +1,7 @@
+ class Foo {
+-  public a;
+-  private b;
+-  protected c;
+-  public d;
+-  public e;
++  public public a;
++  private public b;
++  protected private c;
++  public protected d;
++  public protected private e;
+ }
+```
+
 # Output
-```js
+
+```ts
 class Foo {
   public public a;
   private public b;
@@ -25,59 +48,181 @@ class Foo {
   public protected d;
   public protected private e;
 }
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: Accessibility modifier already seen.
-  ┌─ duplicates-access-modifier.ts:2:10
-  │
-2 │   public public a;
-  │   ------ ^^^^^^ duplicate modifier
-  │   │       
-  │   first modifier
+duplicates-access-modifier.ts:2:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Accessibility modifier already seen.
-  ┌─ duplicates-access-modifier.ts:3:11
-  │
-3 │   private public b;
-  │   ------- ^^^^^^ duplicate modifier
-  │   │        
-  │   first modifier
+  × Accessibility modifier already seen.
+  
+    1 │ class Foo {
+  > 2 │   public public a;
+      │          ^^^^^^
+    3 │   private public b;
+    4 │   protected private c;
+  
+  i duplicate modifier
+  
+    1 │ class Foo {
+  > 2 │   public public a;
+      │          ^^^^^^
+    3 │   private public b;
+    4 │   protected private c;
+  
+  i first modifier
+  
+    1 │ class Foo {
+  > 2 │   public public a;
+      │   ^^^^^^
+    3 │   private public b;
+    4 │   protected private c;
+  
+duplicates-access-modifier.ts:3:11 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Accessibility modifier already seen.
-  ┌─ duplicates-access-modifier.ts:4:13
-  │
-4 │   protected private c;
-  │   --------- ^^^^^^^ duplicate modifier
-  │   │          
-  │   first modifier
+  × Accessibility modifier already seen.
+  
+    1 │ class Foo {
+    2 │   public public a;
+  > 3 │   private public b;
+      │           ^^^^^^
+    4 │   protected private c;
+    5 │   public protected d;
+  
+  i duplicate modifier
+  
+    1 │ class Foo {
+    2 │   public public a;
+  > 3 │   private public b;
+      │           ^^^^^^
+    4 │   protected private c;
+    5 │   public protected d;
+  
+  i first modifier
+  
+    1 │ class Foo {
+    2 │   public public a;
+  > 3 │   private public b;
+      │   ^^^^^^^
+    4 │   protected private c;
+    5 │   public protected d;
+  
+duplicates-access-modifier.ts:4:13 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Accessibility modifier already seen.
-  ┌─ duplicates-access-modifier.ts:5:10
-  │
-5 │   public protected d;
-  │   ------ ^^^^^^^^^ duplicate modifier
-  │   │       
-  │   first modifier
+  × Accessibility modifier already seen.
+  
+    2 │   public public a;
+    3 │   private public b;
+  > 4 │   protected private c;
+      │             ^^^^^^^
+    5 │   public protected d;
+    6 │   public protected private e;
+  
+  i duplicate modifier
+  
+    2 │   public public a;
+    3 │   private public b;
+  > 4 │   protected private c;
+      │             ^^^^^^^
+    5 │   public protected d;
+    6 │   public protected private e;
+  
+  i first modifier
+  
+    2 │   public public a;
+    3 │   private public b;
+  > 4 │   protected private c;
+      │   ^^^^^^^^^
+    5 │   public protected d;
+    6 │   public protected private e;
+  
+duplicates-access-modifier.ts:5:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Accessibility modifier already seen.
-  ┌─ duplicates-access-modifier.ts:6:10
-  │
-6 │   public protected private e;
-  │   ------ ^^^^^^^^^ duplicate modifier
-  │   │       
-  │   first modifier
+  × Accessibility modifier already seen.
+  
+    3 │   private public b;
+    4 │   protected private c;
+  > 5 │   public protected d;
+      │          ^^^^^^^^^
+    6 │   public protected private e;
+    7 │ }
+  
+  i duplicate modifier
+  
+    3 │   private public b;
+    4 │   protected private c;
+  > 5 │   public protected d;
+      │          ^^^^^^^^^
+    6 │   public protected private e;
+    7 │ }
+  
+  i first modifier
+  
+    3 │   private public b;
+    4 │   protected private c;
+  > 5 │   public protected d;
+      │   ^^^^^^
+    6 │   public protected private e;
+    7 │ }
+  
+duplicates-access-modifier.ts:6:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Accessibility modifier already seen.
-  ┌─ duplicates-access-modifier.ts:6:20
-  │
-6 │   public protected private e;
-  │          --------- ^^^^^^^ duplicate modifier
-  │          │          
-  │          first modifier
+  × Accessibility modifier already seen.
+  
+    4 │   protected private c;
+    5 │   public protected d;
+  > 6 │   public protected private e;
+      │          ^^^^^^^^^
+    7 │ }
+    8 │ 
+  
+  i duplicate modifier
+  
+    4 │   protected private c;
+    5 │   public protected d;
+  > 6 │   public protected private e;
+      │          ^^^^^^^^^
+    7 │ }
+    8 │ 
+  
+  i first modifier
+  
+    4 │   protected private c;
+    5 │   public protected d;
+  > 6 │   public protected private e;
+      │   ^^^^^^
+    7 │ }
+    8 │ 
+  
+duplicates-access-modifier.ts:6:20 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Accessibility modifier already seen.
+  
+    4 │   protected private c;
+    5 │   public protected d;
+  > 6 │   public protected private e;
+      │                    ^^^^^^^
+    7 │ }
+    8 │ 
+  
+  i duplicate modifier
+  
+    4 │   protected private c;
+    5 │   public protected d;
+  > 6 │   public protected private e;
+      │                    ^^^^^^^
+    7 │ }
+    8 │ 
+  
+  i first modifier
+  
+    4 │   protected private c;
+    5 │   public protected d;
+  > 6 │   public protected private e;
+      │          ^^^^^^^^^
+    7 │ }
+    8 │ 
+  
 
 ```
 

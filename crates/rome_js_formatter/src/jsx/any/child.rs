@@ -1,16 +1,19 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsxAnyChild;
-impl ToFormatElement for JsxAnyChild {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsxElement(node) => node.to_format_element(formatter),
-            Self::JsxSelfClosingElement(node) => node.to_format_element(formatter),
-            Self::JsxText(node) => node.to_format_element(formatter),
-            Self::JsxExpressionChild(node) => node.to_format_element(formatter),
-            Self::JsxSpreadChild(node) => node.to_format_element(formatter),
-            Self::JsxFragment(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyJsxChild;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsxChild;
+impl FormatRule<AnyJsxChild> for FormatAnyJsxChild {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsxChild, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsxChild::JsxElement(node) => node.format().fmt(f),
+            AnyJsxChild::JsxSelfClosingElement(node) => node.format().fmt(f),
+            AnyJsxChild::JsxText(node) => node.format().fmt(f),
+            AnyJsxChild::JsxExpressionChild(node) => node.format().fmt(f),
+            AnyJsxChild::JsxSpreadChild(node) => node.format().fmt(f),
+            AnyJsxChild::JsxFragment(node) => node.format().fmt(f),
         }
     }
 }

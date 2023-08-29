@@ -1,6 +1,7 @@
-use crate::event::{rewrite_events, RewriteParseEvents};
 use crate::parser::rewrite_parser::{RewriteMarker, RewriteParser, RewriteToken};
-use crate::parser::{expected_any, ParsedSyntax, ToDiagnostic};
+use crate::parser::JsParserCheckpoint;
+use crate::prelude::*;
+use crate::rewrite::{rewrite_events, RewriteParseEvents};
 use crate::syntax::class::parse_initializer_clause;
 use crate::syntax::expr::{
     is_at_identifier, parse_conditional_expr, parse_unary_expr, ExpressionContext,
@@ -11,13 +12,13 @@ use crate::syntax::js_parse_error::{
 };
 use crate::syntax::object::{is_at_object_member_name, parse_object_member_name};
 use crate::syntax::pattern::{ParseArrayPattern, ParseObjectPattern, ParseWithDefaultPattern};
+use crate::JsParser;
 use crate::ParsedSyntax::{Absent, Present};
-use crate::{Checkpoint, CompletedMarker, Parser};
-use rome_diagnostics::Diagnostic;
 use rome_js_syntax::{JsSyntaxKind::*, *};
+use rome_parser::diagnostic::expected_any;
 use rome_rowan::AstNode;
 
-// test assignment_target
+// test js assignment_target
 // foo += bar = b ??= 3;
 // a.foo -= bar;
 // (foo = bar);
@@ -27,7 +28,7 @@ use rome_rowan::AstNode;
 // ++count === 3
 // a['b'] = c[d] = "test"
 
-// test_err invalid_assignment_target
+// test_err js invalid_assignment_target
 // ++a = b;
 // (++a) = b;
 // (a = b;
@@ -58,14 +59,29 @@ use rome_rowan::AstNode;
 // (a() as string) = "string";
 // <number> a = 3;
 
+// test ts ts_satisfies_assignment
+// let a: any;
+// type B<A> = { a: A };
+// (a satisfies string) = "string";
+// ((a satisfies any) satisfies string) = null;
+// ({ b: a satisfies string } = { b: "test" });
+// ([ a satisfies string ] = [ "test" ]);
+// for (a satisfies string in []) {}
+// (a satisfies B<string>) = { a: "test" };
+
+// test_err ts ts_satisfies_assignment_no_parenthesize
+// let a: any;
+// a satisfies string = "string";
+// (a() satisfies string) = "string";
+
 /// Converts the passed in lhs expression to an assignment pattern
 /// The passed checkpoint allows to restore the parser to the state before it started parsing the expression.
 pub(crate) fn expression_to_assignment_pattern(
-    p: &mut Parser,
+    p: &mut JsParser,
     target: CompletedMarker,
-    checkpoint: Checkpoint,
+    checkpoint: JsParserCheckpoint,
 ) -> CompletedMarker {
-    match target.kind() {
+    match target.kind(p) {
         JS_OBJECT_EXPRESSION => {
             p.rewind(checkpoint);
             ObjectAssignmentPattern.parse_object_pattern(p).unwrap()
@@ -78,7 +94,7 @@ pub(crate) fn expression_to_assignment_pattern(
     }
 }
 
-// test array_or_object_member_assignment
+// test js array_or_object_member_assignment
 // [{
 //   get y() {
 //     throw new Test262Error('The property should not be accessed.');
@@ -95,7 +111,7 @@ pub(crate) fn expression_to_assignment_pattern(
 //     setValue = val;
 //   }
 // }.y = 42 } = { x: 23 });
-pub(crate) fn parse_assignment_pattern(p: &mut Parser) -> ParsedSyntax {
+pub(crate) fn parse_assignment_pattern(p: &mut JsParser) -> ParsedSyntax {
     let checkpoint = p.checkpoint();
     let assignment_expression = parse_conditional_expr(p, ExpressionContext::default());
 
@@ -105,16 +121,16 @@ pub(crate) fn parse_assignment_pattern(p: &mut Parser) -> ParsedSyntax {
 
 /// Re-parses an expression as an assignment.
 pub(crate) fn expression_to_assignment(
-    p: &mut Parser,
+    p: &mut JsParser,
     target: CompletedMarker,
-    checkpoint: Checkpoint,
+    checkpoint: JsParserCheckpoint,
 ) -> CompletedMarker {
     try_expression_to_assignment(p, target, checkpoint).unwrap_or_else(
-        // test_err js_regex_assignment
+        // test_err js js_regex_assignment
         // /=0*_:m/=/*_:|
         |mut invalid_assignment_target| {
             // Doesn't seem to be a valid assignment target. Recover and create an error.
-            invalid_assignment_target.change_kind(p, JS_UNKNOWN_ASSIGNMENT);
+            invalid_assignment_target.change_kind(p, JS_BOGUS_ASSIGNMENT);
 
             p.error(invalid_assignment_error(
                 p,
@@ -132,7 +148,7 @@ pub(crate) enum AssignmentExprPrecedence {
 }
 
 impl AssignmentExprPrecedence {
-    fn parse_expression(&self, p: &mut Parser, context: ExpressionContext) -> ParsedSyntax {
+    fn parse_expression(&self, p: &mut JsParser, context: ExpressionContext) -> ParsedSyntax {
         match self {
             AssignmentExprPrecedence::Unary => parse_unary_expr(p, context),
             AssignmentExprPrecedence::Conditional => parse_conditional_expr(p, context),
@@ -141,7 +157,7 @@ impl AssignmentExprPrecedence {
 }
 
 pub(crate) fn parse_assignment(
-    p: &mut Parser,
+    p: &mut JsParser,
     expr_kind: AssignmentExprPrecedence,
     context: ExpressionContext,
 ) -> ParsedSyntax {
@@ -160,25 +176,25 @@ impl ParseWithDefaultPattern for AssignmentPatternWithDefault {
     }
 
     #[inline]
-    fn expected_pattern_error(p: &Parser, range: TextRange) -> Diagnostic {
+    fn expected_pattern_error(p: &JsParser, range: TextRange) -> ParseDiagnostic {
         expected_assignment_target(p, range)
     }
 
     #[inline]
-    fn parse_pattern(&self, p: &mut Parser) -> ParsedSyntax {
+    fn parse_pattern(&self, p: &mut JsParser) -> ParsedSyntax {
         parse_assignment_pattern(p)
     }
 }
 
 struct ArrayAssignmentPattern;
 
-// test array_assignment_target
+// test js array_assignment_target
 // [foo, bar] = baz;
 // [,,,b,,c,] = baz;
 // [a = "test", a.b, call().b] = baz;
 // [((a))] = baz;
 //
-// test_err array_assignment_target_err
+// test_err js array_assignment_target_err
 // [a a, ++b, ] = test;
 // [a, c, ...rest,] = test;
 // [a = , = "test"] = test;
@@ -186,8 +202,8 @@ struct ArrayAssignmentPattern;
 // [a: b] = c
 impl ParseArrayPattern<AssignmentPatternWithDefault> for ArrayAssignmentPattern {
     #[inline]
-    fn unknown_pattern_kind() -> JsSyntaxKind {
-        JS_UNKNOWN_ASSIGNMENT
+    fn bogus_pattern_kind() -> JsSyntaxKind {
+        JS_BOGUS_ASSIGNMENT
     }
 
     #[inline]
@@ -195,7 +211,7 @@ impl ParseArrayPattern<AssignmentPatternWithDefault> for ArrayAssignmentPattern 
         JS_ARRAY_ASSIGNMENT_PATTERN
     }
 
-    // test array_assignment_target_rest
+    // test js array_assignment_target_rest
     // ([ ...abcd ] = a);
     // ([ ...(abcd) ] = a);
     // ([ ...m.test ] = c);
@@ -204,7 +220,7 @@ impl ParseArrayPattern<AssignmentPatternWithDefault> for ArrayAssignmentPattern 
     // ([ ...[x, y] ] = b);
     // ([ ...[ ...a ] ] = c);
     //
-    // test_err array_assignment_target_rest_err
+    // test_err js array_assignment_target_rest_err
     // ([ ... ] = a);
     // ([ ...c = "default" ] = a);
     // ([ ...rest, other_assignment ] = a);
@@ -218,8 +234,8 @@ impl ParseArrayPattern<AssignmentPatternWithDefault> for ArrayAssignmentPattern 
     }
 
     #[inline]
-    fn expected_element_error(p: &Parser, range: TextRange) -> Diagnostic {
-        expected_any(&["assignment target", "rest element", "comma"], range).to_diagnostic(p)
+    fn expected_element_error(p: &JsParser, range: TextRange) -> ParseDiagnostic {
+        expected_any(&["assignment target", "rest element", "comma"], range).into_diagnostic(p)
     }
 
     #[inline]
@@ -230,14 +246,14 @@ impl ParseArrayPattern<AssignmentPatternWithDefault> for ArrayAssignmentPattern 
 
 struct ObjectAssignmentPattern;
 
-// test object_assignment_target
+// test js object_assignment_target
 // ({} = {});
 // ({ bar, baz } = {});
 // ({ bar: [baz = "baz"], foo = "foo", ...rest } = {});
 impl ParseObjectPattern for ObjectAssignmentPattern {
     #[inline]
-    fn unknown_pattern_kind() -> JsSyntaxKind {
-        JS_UNKNOWN_ASSIGNMENT
+    fn bogus_pattern_kind() -> JsSyntaxKind {
+        JS_BOGUS_ASSIGNMENT
     }
 
     #[inline]
@@ -250,11 +266,11 @@ impl ParseObjectPattern for ObjectAssignmentPattern {
     }
 
     #[inline]
-    fn expected_property_pattern_error(p: &Parser, range: TextRange) -> Diagnostic {
-        expected_any(&["assignment target", "rest property"], range).to_diagnostic(p)
+    fn expected_property_pattern_error(p: &JsParser, range: TextRange) -> ParseDiagnostic {
+        expected_any(&["assignment target", "rest property"], range).into_diagnostic(p)
     }
 
-    // test property_assignment_target
+    // test js property_assignment_target
     // ({x}= {});
     // ({x: y}= {});
     // ({x: y.test().z}= {});
@@ -264,13 +280,13 @@ impl ParseObjectPattern for ObjectAssignmentPattern {
     // ({x: y = "default"}= {});
     // ({0: y, [computed]: z} = {});
     //
-    // test_err property_assignment_target_err
+    // test_err js property_assignment_target_err
     // ({:y} = {});
     // ({=y} = {});
     // ({:="test"} = {});
     // ({:=} = {});
     // ({ a b } = {});
-    fn parse_property_pattern(&self, p: &mut Parser) -> ParsedSyntax {
+    fn parse_property_pattern(&self, p: &mut JsParser) -> ParsedSyntax {
         let m = p.start();
 
         let kind = if (is_at_identifier(p) || p.at(T![=])) && !p.nth_at(1, T![:]) {
@@ -296,7 +312,7 @@ impl ParseObjectPattern for ObjectAssignmentPattern {
         Present(m.complete(p, kind))
     }
 
-    // test rest_property_assignment_target
+    // test js rest_property_assignment_target
     // ({ ...abcd } = a);
     // ({ ...(abcd) } = a);
     // ({ ...m.test } = c);
@@ -304,13 +320,13 @@ impl ParseObjectPattern for ObjectAssignmentPattern {
     // ({ ...any.expression().b } = c);
     // ({ b: { ...a } } = c);
     //
-    // test_err rest_property_assignment_target_err
+    // test_err js rest_property_assignment_target_err
     // ({ ... } = a);
     // ({ ...c = "default" } = a);
     // ({ ...{a} } = b);
     // ({ ...rest, other_assignment } = a);
     // ({ ...rest, } = a);
-    fn parse_rest_property_pattern(&self, p: &mut Parser) -> ParsedSyntax {
+    fn parse_rest_property_pattern(&self, p: &mut JsParser) -> ParsedSyntax {
         if !p.at(T![...]) {
             return Absent;
         }
@@ -322,16 +338,14 @@ impl ParseObjectPattern for ObjectAssignmentPattern {
 
         if let Some(mut target) = target {
             if matches!(
-                target.kind(),
+                target.kind(p),
                 JS_OBJECT_ASSIGNMENT_PATTERN | JS_ARRAY_ASSIGNMENT_PATTERN
             ) {
-                target.change_kind(p, JS_UNKNOWN_ASSIGNMENT);
-                p.error(
-                    p.err_builder(
-                        "object and array assignment targets are not allowed in rest patterns",
-                    )
-                    .primary(target.range(p), ""),
-                );
+                target.change_kind(p, JS_BOGUS_ASSIGNMENT);
+                p.error(p.err_builder(
+                    "object and array assignment targets are not allowed in rest patterns",
+                    target.range(p),
+                ));
             }
         }
 
@@ -340,12 +354,12 @@ impl ParseObjectPattern for ObjectAssignmentPattern {
 }
 
 fn try_expression_to_assignment(
-    p: &mut Parser,
+    p: &mut JsParser,
     target: CompletedMarker,
-    checkpoint: Checkpoint,
+    checkpoint: JsParserCheckpoint,
 ) -> Result<CompletedMarker, CompletedMarker> {
     if !matches!(
-        target.kind(),
+        target.kind(p),
         JS_PARENTHESIZED_EXPRESSION
             | JS_STATIC_MEMBER_EXPRESSION
             | JS_COMPUTED_MEMBER_EXPRESSION
@@ -353,6 +367,7 @@ fn try_expression_to_assignment(
             | TS_NON_NULL_ASSERTION_EXPRESSION
             | TS_TYPE_ASSERTION_EXPRESSION
             | TS_AS_EXPRESSION
+            | TS_SATISFIES_EXPRESSION
     ) {
         return Err(target);
     }
@@ -414,6 +429,7 @@ impl RewriteParseEvents for ReparseAssignment {
             JS_IDENTIFIER_EXPRESSION => JS_IDENTIFIER_ASSIGNMENT,
             TS_NON_NULL_ASSERTION_EXPRESSION => TS_NON_NULL_ASSERTION_ASSIGNMENT,
             TS_AS_EXPRESSION => TS_AS_ASSIGNMENT,
+            TS_SATISFIES_EXPRESSION => TS_SATISFIES_ASSIGNMENT,
             TS_TYPE_ASSERTION_EXPRESSION => TS_TYPE_ASSERTION_ASSIGNMENT,
             JS_REFERENCE_IDENTIFIER => {
                 self.parents.push((kind, None)); // Omit reference identifiers
@@ -421,15 +437,20 @@ impl RewriteParseEvents for ReparseAssignment {
             }
             _ => {
                 self.inside_assignment = false;
-                if TsType::can_cast(kind)
+                if AnyTsType::can_cast(kind)
                     && matches!(
                         self.parents.last(),
-                        Some((TS_AS_ASSIGNMENT | TS_TYPE_ASSERTION_ASSIGNMENT, _))
+                        Some((
+                            TS_AS_ASSIGNMENT
+                                | TS_SATISFIES_ASSIGNMENT
+                                | TS_TYPE_ASSERTION_ASSIGNMENT,
+                            _
+                        ))
                     )
                 {
                     kind
                 } else {
-                    JS_UNKNOWN_ASSIGNMENT
+                    JS_BOGUS_ASSIGNMENT
                 }
             }
         };
@@ -445,27 +466,28 @@ impl RewriteParseEvents for ReparseAssignment {
 
             match kind {
                 JS_IDENTIFIER_ASSIGNMENT => {
-                    // test_err eval_arguments_assignment
+                    // test_err js eval_arguments_assignment
                     // eval = "test";
                     // arguments = "test";
                     let name = completed.text(p);
                     if matches!(name, "eval" | "arguments") && p.is_strict_mode() {
-                        let error = p
-                            .err_builder(&format!(
-                                "Illegal use of `{}` as an identifier in strict mode",
-                                name
-                            ))
-                            .primary(completed.range(p), "");
+                        let error = p.err_builder(
+                            format!("Illegal use of `{}` as an identifier in strict mode", name),
+                            completed.range(p),
+                        );
                         p.error(error);
 
-                        completed.change_to_unknown(p);
+                        completed.change_to_bogus(p);
                     }
                 }
-                JS_UNKNOWN_ASSIGNMENT => {
+                JS_BOGUS_ASSIGNMENT => {
                     let range = completed.range(p);
                     p.error(
-                        p.err_builder(&format!("Invalid assignment to `{}`", completed.text(p)))
-                            .primary(range, "This expression cannot be assigned to"),
+                        p.err_builder(
+                            format!("Invalid assignment to `{}`", completed.text(p)),
+                            range,
+                        )
+                        .hint("This expression cannot be assigned to"),
                     );
                 }
                 _ => {}
@@ -474,10 +496,13 @@ impl RewriteParseEvents for ReparseAssignment {
             self.result = Some(completed.into());
         }
 
-        if TsType::can_cast(kind)
+        if AnyTsType::can_cast(kind)
             && matches!(
                 self.parents.last(),
-                Some((TS_TYPE_ASSERTION_ASSIGNMENT | TS_AS_ASSIGNMENT, _))
+                Some((
+                    TS_TYPE_ASSERTION_ASSIGNMENT | TS_AS_ASSIGNMENT | TS_SATISFIES_ASSIGNMENT,
+                    _
+                ))
             )
         {
             self.inside_assignment = true;
@@ -493,7 +518,7 @@ impl RewriteParseEvents for ReparseAssignment {
                 JS_COMPUTED_MEMBER_ASSIGNMENT | JS_STATIC_MEMBER_ASSIGNMENT
             ) && token.kind == T![?.]
             {
-                *parent_kind = JS_UNKNOWN_ASSIGNMENT
+                *parent_kind = JS_BOGUS_ASSIGNMENT
             }
         }
 

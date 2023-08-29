@@ -1,13 +1,13 @@
-use crate::formatter::TrailingSeparator;
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::{
-    format_elements, join_elements, soft_line_break_or_space, space_token, token, FormatElement,
-    FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
+use rome_formatter::{format_args, write};
+
 use rome_js_syntax::{TsEnumDeclaration, TsEnumDeclarationFields};
 
-impl ToFormatElement for TsEnumDeclaration {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsEnumDeclaration;
+
+impl FormatNodeRule<TsEnumDeclaration> for FormatTsEnumDeclaration {
+    fn fmt_fields(&self, node: &TsEnumDeclaration, f: &mut JsFormatter) -> FormatResult<()> {
         let TsEnumDeclarationFields {
             const_token,
             enum_token,
@@ -15,24 +15,43 @@ impl ToFormatElement for TsEnumDeclaration {
             members,
             l_curly_token,
             r_curly_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let const_token = const_token.format_with_or_empty(formatter, |const_token| {
-            format_elements![const_token, space_token()]
-        })?;
-        let enum_token = enum_token.format_with(formatter, |enum_token| {
-            format_elements![enum_token, space_token()]
-        })?;
-        let id = id.format_with(formatter, |id| format_elements![id, space_token()])?;
+        if let Some(const_token) = const_token {
+            write!(f, [const_token.format(), space()])?;
+        }
 
-        let members =
-            formatter.format_separated(&members, || token(","), TrailingSeparator::default())?;
-        let list = formatter.format_delimited_soft_block_spaces(
-            &l_curly_token?,
-            join_elements(soft_line_break_or_space(), members),
-            &r_curly_token?,
+        write!(
+            f,
+            [
+                enum_token.format(),
+                space(),
+                id.format(),
+                space(),
+                l_curly_token.format(),
+            ]
         )?;
 
-        Ok(format_elements![const_token, enum_token, id, list])
+        if members.is_empty() {
+            write!(
+                f,
+                [group(&format_args![
+                    format_dangling_comments(node.syntax()),
+                    soft_line_break()
+                ])]
+            )?;
+        } else {
+            write!(f, [block_indent(&members.format())])?;
+        }
+
+        write!(f, [r_curly_token.format()])
+    }
+
+    fn fmt_dangling_comments(
+        &self,
+        _: &TsEnumDeclaration,
+        _: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        Ok(())
     }
 }

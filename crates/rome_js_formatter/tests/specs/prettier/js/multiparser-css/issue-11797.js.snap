@@ -1,8 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-expression: issue-11797.js
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/multiparser-css/issue-11797.js
 ---
+
 # Input
+
 ```js
 const paragraph1 = css`
   font-size: 12px;
@@ -19,7 +22,25 @@ const paragraph3 = css`
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,7 +1,6 @@
+ const paragraph1 = css`
+   font-size: 12px;
+-  transform: ${vert ? "translateY" : "translateX"}
+-    (${translation + handleOffset}px);
++  transform: ${vert ? "translateY" : "translateX"}(${translation + handleOffset}px);
+ `;
+ 
+ const paragraph2 = css`
+```
+
 # Output
+
 ```js
 const paragraph1 = css`
   font-size: 12px;
@@ -33,11 +54,11 @@ const paragraph2 = css`
 const paragraph3 = css`
   transform: ${expr} (30px);
 `;
-
 ```
 
 # Lines exceeding max width of 80 characters
 ```
     3:   transform: ${vert ? "translateY" : "translateX"}(${translation + handleOffset}px);
 ```
+
 

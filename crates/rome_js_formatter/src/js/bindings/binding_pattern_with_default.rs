@@ -1,26 +1,33 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-
+use rome_formatter::write;
 use rome_js_syntax::JsBindingPatternWithDefault;
 use rome_js_syntax::JsBindingPatternWithDefaultFields;
 
-impl ToFormatElement for JsBindingPatternWithDefault {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsBindingPatternWithDefault;
+
+impl FormatNodeRule<JsBindingPatternWithDefault> for FormatJsBindingPatternWithDefault {
+    fn fmt_fields(
+        &self,
+        node: &JsBindingPatternWithDefault,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
         let JsBindingPatternWithDefaultFields {
             pattern,
             eq_token,
             default,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            pattern.format(formatter)?,
-            space_token(),
-            eq_token.format(formatter)?,
-            space_token(),
-            default.format(formatter)?
-        ])
+        write![
+            f,
+            [
+                pattern.format(),
+                space(),
+                eq_token.format(),
+                space(),
+                default.format()
+            ]
+        ]
     }
 }

@@ -1,63 +1,71 @@
+use crate::prelude::*;
+use crate::AsFormat;
+
+use crate::context::trailing_comma::FormatTrailingComma;
+use rome_formatter::write;
 use rome_js_syntax::{
-    JsAnyArrayAssignmentPatternElement, JsAnyArrayBindingPatternElement, JsAnyArrayElement,
+    AnyJsArrayAssignmentPatternElement, AnyJsArrayBindingPatternElement, AnyJsArrayElement,
     JsLanguage,
 };
 use rome_rowan::{AstNode, AstSeparatedList};
 
-use crate::{
-    empty_element, format_elements,
-    formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode},
-    if_group_breaks, join_elements_soft_line, token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
-
 /// Utility function to print array-like nodes (array expressions, array bindings and assignment patterns)
-pub(crate) fn format_array_node<N, I>(
-    node: &N,
-    formatter: &Formatter,
-) -> FormatResult<FormatElement>
+pub(crate) fn write_array_node<N, I>(node: &N, f: &mut JsFormatter) -> FormatResult<()>
 where
     N: AstSeparatedList<Language = JsLanguage, Node = I>,
-    I: ArrayNodeElement,
+    I: ArrayNodeElement + AsFormat<JsFormatContext>,
 {
+    let trailing_separator = FormatTrailingComma::ES5.trailing_separator(f.options());
+
     // Specifically do not use format_separated as arrays need separators
     // inserted after holes regardless of the formatting since this makes a
     // semantic difference
+
+    let mut join = f.join_nodes_with_soft_line();
     let last_index = node.len().saturating_sub(1);
-    let results = node
-        .elements()
-        .enumerate()
-        .map(|(index, element)| {
-            let node = element.node()?;
-            let separator_mode = node.separator_mode();
 
-            let is_disallow = matches!(separator_mode, TrailingSeparatorMode::Disallow);
-            let is_force = matches!(separator_mode, TrailingSeparatorMode::Force);
+    for (index, element) in node.elements().enumerate() {
+        let node = element.node()?;
+        let separator_mode = node.separator_mode();
 
-            let elem = node.format(formatter)?;
-            let separator = if is_disallow {
-                // Trailing separators are disallowed, replace it with an empty element
-                if let Some(separator) = element.trailing_separator()? {
-                    formatter.format_replaced(&separator, empty_element())
+        let is_disallow = matches!(separator_mode, TrailingSeparatorMode::Disallow);
+        let is_force = matches!(separator_mode, TrailingSeparatorMode::Force);
+
+        join.entry(
+            node.syntax(),
+            &format_with(|f| {
+                write!(f, [group(&node.format())])?;
+
+                if is_disallow {
+                    // Trailing separators are disallowed, replace it with an empty element
+                    if let Some(separator) = element.trailing_separator()? {
+                        write!(f, [format_removed(separator)])?;
+                    }
+                } else if is_force || index != last_index {
+                    // In forced separator mode or if this element is not the last in the list, print the separator
+                    match element.trailing_separator()? {
+                        Some(trailing) => write!(f, [trailing.format()])?,
+                        None => text(",").fmt(f)?,
+                    };
+                } else if let Some(separator) = element.trailing_separator()? {
+                    match trailing_separator {
+                        TrailingSeparator::Omit => {
+                            write!(f, [format_removed(separator)])?;
+                        }
+                        _ => {
+                            write!(f, [format_only_if_breaks(separator, &separator.format())])?;
+                        }
+                    }
                 } else {
-                    empty_element()
-                }
-            } else if is_force || index != last_index {
-                // In forced separator mode or if this element is not the last in the list, print the separator
-                element
-                    .trailing_separator()
-                    .format_or(formatter, || token(","))?
-            } else if let Some(separator) = element.trailing_separator()? {
-                formatter.format_replaced(&separator, if_group_breaks(token(",")))
-            } else {
-                if_group_breaks(token(","))
-            };
+                    write!(f, [FormatTrailingComma::ES5])?;
+                };
 
-            Ok((node.syntax().clone(), format_elements![elem, separator]))
-        })
-        .collect::<FormatResult<Vec<_>>>()?;
+                Ok(())
+            }),
+        );
+    }
 
-    Ok(join_elements_soft_line(results))
+    join.finish()
 }
 
 /// Determines if a trailing separator should be inserted after an array element
@@ -71,14 +79,12 @@ pub(crate) enum TrailingSeparatorMode {
     Force,
 }
 
-pub(crate) trait ArrayNodeElement:
-    AstNode<Language = JsLanguage> + Clone + ToFormatElement
-{
+pub(crate) trait ArrayNodeElement: AstNode<Language = JsLanguage> {
     /// Determines how the trailing separator should be printer for this element
     fn separator_mode(&self) -> TrailingSeparatorMode;
 }
 
-impl ArrayNodeElement for JsAnyArrayElement {
+impl ArrayNodeElement for AnyJsArrayElement {
     fn separator_mode(&self) -> TrailingSeparatorMode {
         match self {
             Self::JsArrayHole(_) => TrailingSeparatorMode::Force,
@@ -87,7 +93,7 @@ impl ArrayNodeElement for JsAnyArrayElement {
     }
 }
 
-impl ArrayNodeElement for JsAnyArrayAssignmentPatternElement {
+impl ArrayNodeElement for AnyJsArrayAssignmentPatternElement {
     fn separator_mode(&self) -> TrailingSeparatorMode {
         match self {
             Self::JsArrayHole(_) => TrailingSeparatorMode::Force,
@@ -97,7 +103,7 @@ impl ArrayNodeElement for JsAnyArrayAssignmentPatternElement {
     }
 }
 
-impl ArrayNodeElement for JsAnyArrayBindingPatternElement {
+impl ArrayNodeElement for AnyJsArrayBindingPatternElement {
     fn separator_mode(&self) -> TrailingSeparatorMode {
         match self {
             Self::JsArrayHole(_) => TrailingSeparatorMode::Force,

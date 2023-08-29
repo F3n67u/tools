@@ -1,11 +1,12 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 119
-expression: mapped_types.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/comments/mapped_types.ts
 ---
+
 # Input
-```js
+
+```ts
 type A = {
   // commentA
   [a in A]: string;
@@ -49,8 +50,32 @@ type M = { [m in M] /* commentG */: string }
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -24,7 +24,7 @@
+ };
+ 
+ type G = {
+-  [g in G /* commentG */]: string;
++  [g in G] /* commentG */ : string;
+ };
+ 
+ type H = { [/* commentH */ h in H]: string };
+@@ -37,4 +37,4 @@
+ 
+ type L = { [l in L /* commentL */]: string };
+ 
+-type M = { [m in M /* commentG */]: string };
++type M = { [m in M] /* commentG */ : string };
+```
+
 # Output
-```js
+
+```ts
 type A = {
   // commentA
   [a in A]: string;
@@ -61,50 +86,36 @@ type B = {
 };
 
 type C = {
-  [c in C]: string; /* commentC */
+  [/* commentC */ c in C]: string;
 };
 
 type D = {
-  [d in D]: string; /* commentD */
+  [d /* commentD */ in D]: string;
 };
 
 type E = {
-  [e in E]: string; /* commentE */
+  [e in /* commentE */ E]: string;
 };
 
 type F = {
-  [f in F]: string; /* commentF */
+  [f in F /* commentF */]: string;
 };
 
 type G = {
-  [g in G]: string; /* commentG */
+  [g in G] /* commentG */ : string;
 };
 
-type H = {
-  /* commentH */
-  [h in H]: string;
-};
+type H = { [/* commentH */ h in H]: string };
 
-type I = {
-  [i in I]: string; /* commentI */
-};
+type I = { [/* commentI */ i in I]: string };
 
-type J = {
-  [j in J]: string; /* commentJ */
-};
+type J = { [j /* commentJ */ in J]: string };
 
-type K = {
-  [k in K]: string; /* commentK */
-};
+type K = { [k in /* commentK */ K]: string };
 
-type L = {
-  [l in L]: string; /* commentL */
-};
+type L = { [l in L /* commentL */]: string };
 
-type M = {
-  [m in M]: string; /* commentG */
-};
-
+type M = { [m in M] /* commentG */ : string };
 ```
 
 

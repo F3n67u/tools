@@ -1,16 +1,15 @@
+use crate::prelude::*;
+
+use crate::utils::FormatStatementBody;
+use rome_formatter::{format_args, write};
 use rome_js_syntax::JsForInStatement;
-
-use crate::formatter_traits::FormatTokenAndNode;
-
-use crate::utils::format_head_body_statement;
-use crate::{
-    format_elements, soft_line_break_or_space, space_token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
 use rome_js_syntax::JsForInStatementFields;
 
-impl ToFormatElement for JsForInStatement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsForInStatement;
+
+impl FormatNodeRule<JsForInStatement> for FormatJsForInStatement {
+    fn fmt_fields(&self, node: &JsForInStatement, f: &mut JsFormatter) -> FormatResult<()> {
         let JsForInStatementFields {
             for_token,
             l_paren_token,
@@ -19,31 +18,27 @@ impl ToFormatElement for JsForInStatement {
             expression,
             r_paren_token,
             body,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let for_token = for_token.format(formatter)?;
-        let initializer = initializer.format(formatter)?;
-        let in_token = in_token.format(formatter)?;
-        let expression = expression.format(formatter)?;
+        let for_token = for_token.format();
+        let initializer = initializer.format();
+        let in_token = in_token.format();
+        let expression = expression.format();
 
-        format_head_body_statement(
-            formatter,
-            format_elements![
+        write!(
+            f,
+            [group(&format_args!(
                 for_token,
-                space_token(),
-                formatter.format_delimited_soft_block_indent(
-                    &l_paren_token?,
-                    format_elements![
-                        initializer,
-                        soft_line_break_or_space(),
-                        in_token,
-                        soft_line_break_or_space(),
-                        expression,
-                    ],
-                    &r_paren_token?
-                )?,
-            ],
-            body?,
+                space(),
+                l_paren_token.format(),
+                initializer,
+                space(),
+                in_token,
+                space(),
+                expression,
+                r_paren_token.format(),
+                FormatStatementBody::new(&body?)
+            ))]
         )
     }
 }

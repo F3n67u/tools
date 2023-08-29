@@ -1,10 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 144
-expression: decimal.js
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/babel-plugins/decimal.js
 ---
+
 # Input
+
 ```js
 // https://github.com/babel/babel/pull/11640
 
@@ -35,7 +36,71 @@ typeof 1m === "decimal128";
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,25 +1,38 @@
+ // https://github.com/babel/babel/pull/11640
+ 
+-100m;
+-9223372036854775807m;
+-0m;
+-3.1415926535897932m;
+-100.0m;
+-0.1m;
+-({ 0m: 0, 0.1m() {}, get 0.2m() {}, set 3m(_) {}, async 4m() {}, *0.5m() {} });
+-1m;
+-100m;
+-9223372036854775807m;
+-100m;
++100m
++9223372036854775807m
++0.m
++3.1415926535897932m
++100.000m
++.1m
++({ 0m: 0, .1m() {}, get
++0.2m()
++{
++}
++, set 3m(_)
++{
++}
++, async 4m()
++{
++}
++, *.5m()
++{
++}
++})
++1.m
++100m
++9223372036854775807m
++100.m
+ 
+ // Invalid decimal
+-2e9m;
+-016432m;
+-089m;
++2e9m
++016432m
++089m
+ 
+ // https://github.com/tc39/proposal-decimal
+-0.1m + 0.2m === 0.3m;
+-2.0m;
++.1m + .2m === .3m
++2.00m
+ -0m;
+ typeof 1m === "bigdecimal";
+ typeof 1m === "decimal128";
+```
+
 # Output
+
 ```js
 // https://github.com/babel/babel/pull/11640
 
@@ -47,13 +112,17 @@ typeof 1m === "decimal128";
 .1m
 ({ 0m: 0, .1m() {}, get
 0.2m()
-{}
+{
+}
 , set 3m(_)
-{}
+{
+}
 , async 4m()
-{}
+{
+}
 , *.5m()
-{}
+{
+}
 })
 1.m
 100m
@@ -71,299 +140,769 @@ typeof 1m === "decimal128";
 -0m;
 typeof 1m === "bigdecimal";
 typeof 1m === "decimal128";
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: expected a statement but instead found '100m'
-  ┌─ decimal.js:3:1
-  │
-3 │ 100m;
-  │ ^^^^ Expected a statement here
+decimal.js:3:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '9223372036854775807m'
-  ┌─ decimal.js:4:1
-  │
-4 │ 9223372036854775807m;
-  │ ^^^^^^^^^^^^^^^^^^^^ Expected a statement here
+  × expected a statement but instead found '100m'
+  
+    1 │ // https://github.com/babel/babel/pull/11640
+    2 │ 
+  > 3 │ 100m;
+      │ ^^^^
+    4 │ 9223372036854775807m;
+    5 │ 0.m;
+  
+  i Expected a statement here
+  
+    1 │ // https://github.com/babel/babel/pull/11640
+    2 │ 
+  > 3 │ 100m;
+      │ ^^^^
+    4 │ 9223372036854775807m;
+    5 │ 0.m;
+  
+decimal.js:3:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '0.m'
-  ┌─ decimal.js:5:1
-  │
-5 │ 0.m;
-  │ ^^^ Expected a statement here
+  × numbers cannot be followed by identifiers directly after
+  
+    1 │ // https://github.com/babel/babel/pull/11640
+    2 │ 
+  > 3 │ 100m;
+      │    ^
+    4 │ 9223372036854775807m;
+    5 │ 0.m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:4:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '3.1415926535897932m'
-  ┌─ decimal.js:6:1
-  │
-6 │ 3.1415926535897932m;
-  │ ^^^^^^^^^^^^^^^^^^^ Expected a statement here
+  × expected a statement but instead found '9223372036854775807m'
+  
+    3 │ 100m;
+  > 4 │ 9223372036854775807m;
+      │ ^^^^^^^^^^^^^^^^^^^^
+    5 │ 0.m;
+    6 │ 3.1415926535897932m;
+  
+  i Expected a statement here
+  
+    3 │ 100m;
+  > 4 │ 9223372036854775807m;
+      │ ^^^^^^^^^^^^^^^^^^^^
+    5 │ 0.m;
+    6 │ 3.1415926535897932m;
+  
+decimal.js:4:20 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '100.000m'
-  ┌─ decimal.js:7:1
-  │
-7 │ 100.000m;
-  │ ^^^^^^^^ Expected a statement here
+  × numbers cannot be followed by identifiers directly after
+  
+    3 │ 100m;
+  > 4 │ 9223372036854775807m;
+      │                    ^
+    5 │ 0.m;
+    6 │ 3.1415926535897932m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:5:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '.1m'
-  ┌─ decimal.js:8:1
-  │
-8 │ .1m;
-  │ ^^^ Expected a statement here
+  × expected a statement but instead found '0.m'
+  
+    3 │ 100m;
+    4 │ 9223372036854775807m;
+  > 5 │ 0.m;
+      │ ^^^
+    6 │ 3.1415926535897932m;
+    7 │ 100.000m;
+  
+  i Expected a statement here
+  
+    3 │ 100m;
+    4 │ 9223372036854775807m;
+  > 5 │ 0.m;
+      │ ^^^
+    6 │ 3.1415926535897932m;
+    7 │ 100.000m;
+  
+decimal.js:5:3 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a property, a shorthand property, a getter, a setter, or a method but instead found '0m'
-  ┌─ decimal.js:9:4
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │    ^^ Expected a property, a shorthand property, a getter, a setter, or a method here
+  × numbers cannot be followed by identifiers directly after
+  
+    3 │ 100m;
+    4 │ 9223372036854775807m;
+  > 5 │ 0.m;
+      │   ^
+    6 │ 3.1415926535897932m;
+    7 │ 100.000m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:6:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a property, a shorthand property, a getter, a setter, or a method but instead found '.1m() {'
-  ┌─ decimal.js:9:11
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │           ^^^^^^^ Expected a property, a shorthand property, a getter, a setter, or a method here
+  × expected a statement but instead found '3.1415926535897932m'
+  
+    4 │ 9223372036854775807m;
+    5 │ 0.m;
+  > 6 │ 3.1415926535897932m;
+      │ ^^^^^^^^^^^^^^^^^^^
+    7 │ 100.000m;
+    8 │ .1m;
+  
+  i Expected a statement here
+  
+    4 │ 9223372036854775807m;
+    5 │ 0.m;
+  > 6 │ 3.1415926535897932m;
+      │ ^^^^^^^^^^^^^^^^^^^
+    7 │ 100.000m;
+    8 │ .1m;
+  
+decimal.js:6:19 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `')'` but instead found `0.2m`
-  ┌─ decimal.js:9:25
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │                         ^^^^ unexpected
+  × numbers cannot be followed by identifiers directly after
+  
+    4 │ 9223372036854775807m;
+    5 │ 0.m;
+  > 6 │ 3.1415926535897932m;
+      │                   ^
+    7 │ 100.000m;
+    8 │ .1m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:7:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found ', set 3m(_)'
-  ┌─ decimal.js:9:33
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │                                 ^^^^^^^^^^^ Expected a statement here
+  × expected a statement but instead found '100.000m'
+  
+    5 │ 0.m;
+    6 │ 3.1415926535897932m;
+  > 7 │ 100.000m;
+      │ ^^^^^^^^
+    8 │ .1m;
+    9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+  
+  i Expected a statement here
+  
+    5 │ 0.m;
+    6 │ 3.1415926535897932m;
+  > 7 │ 100.000m;
+      │ ^^^^^^^^
+    8 │ .1m;
+    9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+  
+decimal.js:7:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found ', async 4m()'
-  ┌─ decimal.js:9:46
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │                                              ^^^^^^^^^^^^ Expected a statement here
+  × numbers cannot be followed by identifiers directly after
+  
+    5 │ 0.m;
+    6 │ 3.1415926535897932m;
+  > 7 │ 100.000m;
+      │        ^
+    8 │ .1m;
+    9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+  
+  i an identifier cannot appear here
+  
+decimal.js:8:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found ', *.5m()'
-  ┌─ decimal.js:9:61
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │                                                             ^^^^^^^^ Expected a statement here
+  × expected a statement but instead found '.1m'
+  
+     6 │ 3.1415926535897932m;
+     7 │ 100.000m;
+   > 8 │ .1m;
+       │ ^^^
+     9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+    10 │ 1.m;
+  
+  i Expected a statement here
+  
+     6 │ 3.1415926535897932m;
+     7 │ 100.000m;
+   > 8 │ .1m;
+       │ ^^^
+     9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+    10 │ 1.m;
+  
+decimal.js:8:3 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '})'
-  ┌─ decimal.js:9:73
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │                                                                         ^^ Expected a statement here
+  × numbers cannot be followed by identifiers directly after
+  
+     6 │ 3.1415926535897932m;
+     7 │ 100.000m;
+   > 8 │ .1m;
+       │   ^
+     9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+    10 │ 1.m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:9:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '1.m'
-   ┌─ decimal.js:10:1
-   │
-10 │ 1.m;
-   │ ^^^ Expected a statement here
+  × expected a property, a shorthand property, a getter, a setter, or a method but instead found '0m'
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │    ^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i Expected a property, a shorthand property, a getter, a setter, or a method here
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │    ^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+decimal.js:9:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '100m'
-   ┌─ decimal.js:11:1
-   │
-11 │ 100m;
-   │ ^^^^ Expected a statement here
+  × numbers cannot be followed by identifiers directly after
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │     ^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:9:11 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '9223372036854775807m'
-   ┌─ decimal.js:12:1
-   │
-12 │ 9223372036854775807m;
-   │ ^^^^^^^^^^^^^^^^^^^^ Expected a statement here
+  × expected a property, a shorthand property, a getter, a setter, or a method but instead found '.1m() {'
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │           ^^^^^^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i Expected a property, a shorthand property, a getter, a setter, or a method here
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │           ^^^^^^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+decimal.js:9:13 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '100.m'
-   ┌─ decimal.js:13:1
-   │
-13 │ 100.m;
-   │ ^^^^^ Expected a statement here
+  × numbers cannot be followed by identifiers directly after
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │             ^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:9:25 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '2e9m'
-   ┌─ decimal.js:16:1
-   │
-16 │ 2e9m;
-   │ ^^^^ Expected a statement here
+  × expected `)` but instead found `0.2m`
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                         ^^^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i Remove 0.2m
+  
+decimal.js:9:28 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '016432m'
-   ┌─ decimal.js:17:1
-   │
-17 │ 016432m;
-   │ ^^^^^^^ Expected a statement here
+  × numbers cannot be followed by identifiers directly after
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                            ^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:9:33 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '089m'
-   ┌─ decimal.js:18:1
-   │
-18 │ 089m;
-   │ ^^^^ Expected a statement here
+  × expected a statement but instead found ', set 3m(_)'
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                 ^^^^^^^^^^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i Expected a statement here
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                 ^^^^^^^^^^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+decimal.js:9:40 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '.1m + .2m === .3m'
-   ┌─ decimal.js:21:1
-   │
-21 │ .1m + .2m === .3m;
-   │ ^^^^^^^^^^^^^^^^^ Expected a statement here
+  × numbers cannot be followed by identifiers directly after
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                        ^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:9:46 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected a statement but instead found '2.00m'
-   ┌─ decimal.js:22:1
-   │
-22 │ 2.00m;
-   │ ^^^^^ Expected a statement here
+  × expected a statement but instead found ', async 4m()'
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                              ^^^^^^^^^^^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i Expected a statement here
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                              ^^^^^^^^^^^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+decimal.js:9:55 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:3:4
-  │
-3 │ 100m;
-  │    ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                                       ^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:9:61 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:4:20
-  │
-4 │ 9223372036854775807m;
-  │                    ^ an identifier cannot appear here
+  × expected a statement but instead found ', *.5m()'
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                                             ^^^^^^^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i Expected a statement here
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                                             ^^^^^^^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+decimal.js:9:66 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:5:3
-  │
-5 │ 0.m;
-  │   ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                                                  ^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:9:73 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:6:19
-  │
-6 │ 3.1415926535897932m;
-  │                   ^ an identifier cannot appear here
+  × expected a statement but instead found '})'
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                                                         ^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+  i Expected a statement here
+  
+     7 │ 100.000m;
+     8 │ .1m;
+   > 9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+       │                                                                         ^^
+    10 │ 1.m;
+    11 │ 100m;
+  
+decimal.js:10:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:7:8
-  │
-7 │ 100.000m;
-  │        ^ an identifier cannot appear here
+  × expected a statement but instead found '1.m'
+  
+     8 │ .1m;
+     9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+  > 10 │ 1.m;
+       │ ^^^
+    11 │ 100m;
+    12 │ 9223372036854775807m;
+  
+  i Expected a statement here
+  
+     8 │ .1m;
+     9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+  > 10 │ 1.m;
+       │ ^^^
+    11 │ 100m;
+    12 │ 9223372036854775807m;
+  
+decimal.js:10:3 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:8:3
-  │
-8 │ .1m;
-  │   ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+     8 │ .1m;
+     9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+  > 10 │ 1.m;
+       │   ^
+    11 │ 100m;
+    12 │ 9223372036854775807m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:11:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:9:5
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │     ^ an identifier cannot appear here
+  × expected a statement but instead found '100m'
+  
+     9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+    10 │ 1.m;
+  > 11 │ 100m;
+       │ ^^^^
+    12 │ 9223372036854775807m;
+    13 │ 100.m;
+  
+  i Expected a statement here
+  
+     9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+    10 │ 1.m;
+  > 11 │ 100m;
+       │ ^^^^
+    12 │ 9223372036854775807m;
+    13 │ 100.m;
+  
+decimal.js:11:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:9:13
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │             ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+     9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
+    10 │ 1.m;
+  > 11 │ 100m;
+       │    ^
+    12 │ 9223372036854775807m;
+    13 │ 100.m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:12:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:9:28
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │                            ^ an identifier cannot appear here
+  × expected a statement but instead found '9223372036854775807m'
+  
+    10 │ 1.m;
+    11 │ 100m;
+  > 12 │ 9223372036854775807m;
+       │ ^^^^^^^^^^^^^^^^^^^^
+    13 │ 100.m;
+    14 │ 
+  
+  i Expected a statement here
+  
+    10 │ 1.m;
+    11 │ 100m;
+  > 12 │ 9223372036854775807m;
+       │ ^^^^^^^^^^^^^^^^^^^^
+    13 │ 100.m;
+    14 │ 
+  
+decimal.js:12:20 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:9:40
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │                                        ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    10 │ 1.m;
+    11 │ 100m;
+  > 12 │ 9223372036854775807m;
+       │                    ^
+    13 │ 100.m;
+    14 │ 
+  
+  i an identifier cannot appear here
+  
+decimal.js:13:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:9:55
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │                                                       ^ an identifier cannot appear here
+  × expected a statement but instead found '100.m'
+  
+    11 │ 100m;
+    12 │ 9223372036854775807m;
+  > 13 │ 100.m;
+       │ ^^^^^
+    14 │ 
+    15 │ // Invalid decimal
+  
+  i Expected a statement here
+  
+    11 │ 100m;
+    12 │ 9223372036854775807m;
+  > 13 │ 100.m;
+       │ ^^^^^
+    14 │ 
+    15 │ // Invalid decimal
+  
+decimal.js:13:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-  ┌─ decimal.js:9:66
-  │
-9 │ ({ 0m: 0, .1m() {}, get 0.2m(){}, set 3m(_){}, async 4m() {}, *.5m() {} });
-  │                                                                  ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    11 │ 100m;
+    12 │ 9223372036854775807m;
+  > 13 │ 100.m;
+       │     ^
+    14 │ 
+    15 │ // Invalid decimal
+  
+  i an identifier cannot appear here
+  
+decimal.js:16:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:10:3
-   │
-10 │ 1.m;
-   │   ^ an identifier cannot appear here
+  × expected a statement but instead found '2e9m'
+  
+    15 │ // Invalid decimal
+  > 16 │ 2e9m;
+       │ ^^^^
+    17 │ 016432m;
+    18 │ 089m;
+  
+  i Expected a statement here
+  
+    15 │ // Invalid decimal
+  > 16 │ 2e9m;
+       │ ^^^^
+    17 │ 016432m;
+    18 │ 089m;
+  
+decimal.js:16:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:11:4
-   │
-11 │ 100m;
-   │    ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    15 │ // Invalid decimal
+  > 16 │ 2e9m;
+       │    ^
+    17 │ 016432m;
+    18 │ 089m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:17:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:12:20
-   │
-12 │ 9223372036854775807m;
-   │                    ^ an identifier cannot appear here
+  × expected a statement but instead found '016432m'
+  
+    15 │ // Invalid decimal
+    16 │ 2e9m;
+  > 17 │ 016432m;
+       │ ^^^^^^^
+    18 │ 089m;
+    19 │ 
+  
+  i Expected a statement here
+  
+    15 │ // Invalid decimal
+    16 │ 2e9m;
+  > 17 │ 016432m;
+       │ ^^^^^^^
+    18 │ 089m;
+    19 │ 
+  
+decimal.js:17:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:13:5
-   │
-13 │ 100.m;
-   │     ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    15 │ // Invalid decimal
+    16 │ 2e9m;
+  > 17 │ 016432m;
+       │       ^
+    18 │ 089m;
+    19 │ 
+  
+  i an identifier cannot appear here
+  
+decimal.js:18:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:16:4
-   │
-16 │ 2e9m;
-   │    ^ an identifier cannot appear here
+  × expected a statement but instead found '089m'
+  
+    16 │ 2e9m;
+    17 │ 016432m;
+  > 18 │ 089m;
+       │ ^^^^
+    19 │ 
+    20 │ // https://github.com/tc39/proposal-decimal
+  
+  i Expected a statement here
+  
+    16 │ 2e9m;
+    17 │ 016432m;
+  > 18 │ 089m;
+       │ ^^^^
+    19 │ 
+    20 │ // https://github.com/tc39/proposal-decimal
+  
+decimal.js:18:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:17:7
-   │
-17 │ 016432m;
-   │       ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    16 │ 2e9m;
+    17 │ 016432m;
+  > 18 │ 089m;
+       │    ^
+    19 │ 
+    20 │ // https://github.com/tc39/proposal-decimal
+  
+  i an identifier cannot appear here
+  
+decimal.js:21:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:18:4
-   │
-18 │ 089m;
-   │    ^ an identifier cannot appear here
+  × expected a statement but instead found '.1m + .2m === .3m'
+  
+    20 │ // https://github.com/tc39/proposal-decimal
+  > 21 │ .1m + .2m === .3m;
+       │ ^^^^^^^^^^^^^^^^^
+    22 │ 2.00m;
+    23 │ -0m;
+  
+  i Expected a statement here
+  
+    20 │ // https://github.com/tc39/proposal-decimal
+  > 21 │ .1m + .2m === .3m;
+       │ ^^^^^^^^^^^^^^^^^
+    22 │ 2.00m;
+    23 │ -0m;
+  
+decimal.js:21:3 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:21:3
-   │
-21 │ .1m + .2m === .3m;
-   │   ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    20 │ // https://github.com/tc39/proposal-decimal
+  > 21 │ .1m + .2m === .3m;
+       │   ^
+    22 │ 2.00m;
+    23 │ -0m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:21:9 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:21:9
-   │
-21 │ .1m + .2m === .3m;
-   │         ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    20 │ // https://github.com/tc39/proposal-decimal
+  > 21 │ .1m + .2m === .3m;
+       │         ^
+    22 │ 2.00m;
+    23 │ -0m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:21:17 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:21:17
-   │
-21 │ .1m + .2m === .3m;
-   │                 ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    20 │ // https://github.com/tc39/proposal-decimal
+  > 21 │ .1m + .2m === .3m;
+       │                 ^
+    22 │ 2.00m;
+    23 │ -0m;
+  
+  i an identifier cannot appear here
+  
+decimal.js:22:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:22:5
-   │
-22 │ 2.00m;
-   │     ^ an identifier cannot appear here
+  × expected a statement but instead found '2.00m'
+  
+    20 │ // https://github.com/tc39/proposal-decimal
+    21 │ .1m + .2m === .3m;
+  > 22 │ 2.00m;
+       │ ^^^^^
+    23 │ -0m;
+    24 │ typeof 1m === "bigdecimal";
+  
+  i Expected a statement here
+  
+    20 │ // https://github.com/tc39/proposal-decimal
+    21 │ .1m + .2m === .3m;
+  > 22 │ 2.00m;
+       │ ^^^^^
+    23 │ -0m;
+    24 │ typeof 1m === "bigdecimal";
+  
+decimal.js:22:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:23:3
-   │
-23 │ -0m;
-   │   ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    20 │ // https://github.com/tc39/proposal-decimal
+    21 │ .1m + .2m === .3m;
+  > 22 │ 2.00m;
+       │     ^
+    23 │ -0m;
+    24 │ typeof 1m === "bigdecimal";
+  
+  i an identifier cannot appear here
+  
+decimal.js:23:3 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:24:9
-   │
-24 │ typeof 1m === "bigdecimal";
-   │         ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    21 │ .1m + .2m === .3m;
+    22 │ 2.00m;
+  > 23 │ -0m;
+       │   ^
+    24 │ typeof 1m === "bigdecimal";
+    25 │ typeof 1m === "decimal128";
+  
+  i an identifier cannot appear here
+  
+decimal.js:24:9 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error: numbers cannot be followed by identifiers directly after
-   ┌─ decimal.js:25:9
-   │
-25 │ typeof 1m === "decimal128";
-   │         ^ an identifier cannot appear here
+  × numbers cannot be followed by identifiers directly after
+  
+    22 │ 2.00m;
+    23 │ -0m;
+  > 24 │ typeof 1m === "bigdecimal";
+       │         ^
+    25 │ typeof 1m === "decimal128";
+    26 │ 
+  
+  i an identifier cannot appear here
+  
+decimal.js:25:9 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × numbers cannot be followed by identifiers directly after
+  
+    23 │ -0m;
+    24 │ typeof 1m === "bigdecimal";
+  > 25 │ typeof 1m === "decimal128";
+       │         ^
+    26 │ 
+  
+  i an identifier cannot appear here
+  
 
 ```
 

@@ -1,16 +1,27 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyObjectAssignmentPatternMember;
-impl ToFormatElement for JsAnyObjectAssignmentPatternMember {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsObjectAssignmentPatternShorthandProperty(node) => {
-                node.to_format_element(formatter)
+use crate::prelude::*;
+use rome_js_syntax::AnyJsObjectAssignmentPatternMember;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsObjectAssignmentPatternMember;
+impl FormatRule<AnyJsObjectAssignmentPatternMember> for FormatAnyJsObjectAssignmentPatternMember {
+    type Context = JsFormatContext;
+    fn fmt(
+        &self,
+        node: &AnyJsObjectAssignmentPatternMember,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        match node {
+            AnyJsObjectAssignmentPatternMember::JsObjectAssignmentPatternShorthandProperty(
+                node,
+            ) => node.format().fmt(f),
+            AnyJsObjectAssignmentPatternMember::JsObjectAssignmentPatternProperty(node) => {
+                node.format().fmt(f)
             }
-            Self::JsObjectAssignmentPatternProperty(node) => node.to_format_element(formatter),
-            Self::JsObjectAssignmentPatternRest(node) => node.to_format_element(formatter),
-            Self::JsUnknownAssignment(node) => node.to_format_element(formatter),
+            AnyJsObjectAssignmentPatternMember::JsObjectAssignmentPatternRest(node) => {
+                node.format().fmt(f)
+            }
+            AnyJsObjectAssignmentPatternMember::JsBogusAssignment(node) => node.format().fmt(f),
         }
     }
 }

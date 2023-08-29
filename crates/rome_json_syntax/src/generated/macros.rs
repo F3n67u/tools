@@ -2,8 +2,8 @@
 
 #[doc = r" Reconstruct an AstNode from a SyntaxNode"]
 #[doc = r""]
-#[doc = r" This macros performs a match over the [kind](SyntaxNode::kind)"]
-#[doc = r" of the provided [SyntaxNode] and constructs the appropriate"]
+#[doc = r" This macros performs a match over the [kind](rome_rowan::SyntaxNode::kind)"]
+#[doc = r" of the provided [rome_rowan::SyntaxNode] and constructs the appropriate"]
 #[doc = r" AstNode type for it, then execute the provided expression over it."]
 #[doc = r""]
 #[doc = r" # Examples"]
@@ -16,40 +16,48 @@ macro_rules! map_syntax_node {
     ($ node : expr , $ pattern : pat => $ body : expr) => {
         match $node {
             node => match $crate::JsonSyntaxNode::kind(&node) {
-                $crate::JsonSyntaxKind::JSON_ARRAY => {
-                    let $pattern = unsafe { $crate::JsonArray::new_unchecked(node) };
+                $crate::JsonSyntaxKind::JSON_ARRAY_VALUE => {
+                    let $pattern = unsafe { $crate::JsonArrayValue::new_unchecked(node) };
                     $body
                 }
-                $crate::JsonSyntaxKind::JSON_BOOLEAN => {
-                    let $pattern = unsafe { $crate::JsonBoolean::new_unchecked(node) };
+                $crate::JsonSyntaxKind::JSON_BOOLEAN_VALUE => {
+                    let $pattern = unsafe { $crate::JsonBooleanValue::new_unchecked(node) };
                     $body
                 }
                 $crate::JsonSyntaxKind::JSON_MEMBER => {
                     let $pattern = unsafe { $crate::JsonMember::new_unchecked(node) };
                     $body
                 }
-                $crate::JsonSyntaxKind::JSON_NULL => {
-                    let $pattern = unsafe { $crate::JsonNull::new_unchecked(node) };
+                $crate::JsonSyntaxKind::JSON_MEMBER_NAME => {
+                    let $pattern = unsafe { $crate::JsonMemberName::new_unchecked(node) };
                     $body
                 }
-                $crate::JsonSyntaxKind::JSON_NUMBER => {
-                    let $pattern = unsafe { $crate::JsonNumber::new_unchecked(node) };
+                $crate::JsonSyntaxKind::JSON_NULL_VALUE => {
+                    let $pattern = unsafe { $crate::JsonNullValue::new_unchecked(node) };
                     $body
                 }
-                $crate::JsonSyntaxKind::JSON_OBJECT => {
-                    let $pattern = unsafe { $crate::JsonObject::new_unchecked(node) };
+                $crate::JsonSyntaxKind::JSON_NUMBER_VALUE => {
+                    let $pattern = unsafe { $crate::JsonNumberValue::new_unchecked(node) };
+                    $body
+                }
+                $crate::JsonSyntaxKind::JSON_OBJECT_VALUE => {
+                    let $pattern = unsafe { $crate::JsonObjectValue::new_unchecked(node) };
                     $body
                 }
                 $crate::JsonSyntaxKind::JSON_ROOT => {
                     let $pattern = unsafe { $crate::JsonRoot::new_unchecked(node) };
                     $body
                 }
-                $crate::JsonSyntaxKind::JSON_STRING => {
-                    let $pattern = unsafe { $crate::JsonString::new_unchecked(node) };
+                $crate::JsonSyntaxKind::JSON_STRING_VALUE => {
+                    let $pattern = unsafe { $crate::JsonStringValue::new_unchecked(node) };
                     $body
                 }
-                $crate::JsonSyntaxKind::JSON_UNKNOWN => {
-                    let $pattern = unsafe { $crate::JsonUnknown::new_unchecked(node) };
+                $crate::JsonSyntaxKind::JSON_BOGUS => {
+                    let $pattern = unsafe { $crate::JsonBogus::new_unchecked(node) };
+                    $body
+                }
+                $crate::JsonSyntaxKind::JSON_BOGUS_VALUE => {
+                    let $pattern = unsafe { $crate::JsonBogusValue::new_unchecked(node) };
                     $body
                 }
                 $crate::JsonSyntaxKind::JSON_ARRAY_ELEMENT_LIST => {

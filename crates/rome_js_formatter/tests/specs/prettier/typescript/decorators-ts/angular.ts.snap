@@ -1,11 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 144
-expression: angular.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: typescript/decorators-ts/angular.ts
 ---
+
 # Input
-```js
+
+```ts
 @Component({
   selector: 'toh-hero-button',
   template: `<button>{{label}}</button>`
@@ -17,17 +17,33 @@ export class HeroButtonComponent {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,6 +1,6 @@
+ @Component({
+   selector: "toh-hero-button",
+-  template: `<button>{{ label }}</button>`,
++  template: `<button>{{label}}</button>`,
+ })
+ export class HeroButtonComponent {
+   @Output() change = new EventEmitter<any>();
+```
+
 # Output
-```js
+
+```ts
 @Component({
-  selector: 'toh-hero-button',
-  template: `<button>{{label}}</button>`
+  selector: "toh-hero-button",
+  template: `<button>{{label}}</button>`,
 })
 export class HeroButtonComponent {
   @Output() change = new EventEmitter<any>();
   @Input() label: string;
 }
-
 ```
 
 

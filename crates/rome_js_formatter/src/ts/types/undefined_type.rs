@@ -1,9 +1,26 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsUndefinedType;
+use crate::prelude::*;
 
-impl ToFormatElement for TsUndefinedType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        self.undefined_token().format(formatter)
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxNode, TsUndefinedType, TsUndefinedTypeFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsUndefinedType;
+
+impl FormatNodeRule<TsUndefinedType> for FormatTsUndefinedType {
+    fn fmt_fields(&self, node: &TsUndefinedType, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsUndefinedTypeFields { undefined_token } = node.as_fields();
+
+        write![f, [undefined_token.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &TsUndefinedType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsUndefinedType {
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

@@ -1,11 +1,29 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsReferenceType;
+use crate::prelude::*;
 
-impl ToFormatElement for TsReferenceType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let name = self.name().format(formatter)?;
-        let type_arguments = self.type_arguments().format_or_empty(formatter)?;
-        Ok(format_elements![name, type_arguments])
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxNode, TsReferenceType, TsReferenceTypeFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsReferenceType;
+
+impl FormatNodeRule<TsReferenceType> for FormatTsReferenceType {
+    fn fmt_fields(&self, node: &TsReferenceType, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsReferenceTypeFields {
+            name,
+            type_arguments,
+        } = node.as_fields();
+
+        write![f, [name.format(), type_arguments.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &TsReferenceType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsReferenceType {
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

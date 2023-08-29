@@ -1,8 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/spec_test.rs
-expression: attributes.jsx
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: jsx/attributes.jsx
 ---
+
 # Input
+
+```jsx
 
 					<CodeEditor
 						value={formatted_code}
@@ -46,15 +49,61 @@ expression: attributes.jsx
 
 					let a = <test aVeryLongAttributeName={"WithAVeryLongValuethat exceeds the line width, what happens with ithis"} />;
 
+					<test {...WithAVeryLongFunctionthat_exceeds_the_line_width_what_happens_with_ithis()} />;
+					<div {...["Chungking Express", "Fallen Angels", "In the Mood for Love", "Days of Living Wild", "Happy Together"]}/>;
+
+
+//  https://github.com/rome/tools/issues/2944
+<div className={asdf asdf} />;
+<div className={asdf
+	/* comment */ asdf } />;
+
+// Wrapping JSX in attribute
+const a = <Popconfirm
+		title={
+			(
+				<span className="popconfirm-test">
+		Are you sure delete this task? let
+	</span>
+			)
+		}
+		okText="Yes"
+		cancelText="No"
+		mouseEnterDelay={0}
+		mouseLeaveDelay={0}
+		onVisibleChange={onVisibleChange}
+	>
+		<span>Delete</span>
+	</Popconfirm>
+;
+
+<OtherComponent
+	value={
+		new Set(veryLongConditionZzzzzzzzzzzzzzzzzveryLongConditionZzzzzzzzzzzzzzzzzveryLongConditionZzzzzzzzzzzzzzzzz)
+	}
+/>
+
+```
+
 
 =============================
+
 # Outputs
+
 ## Output 1
+
 -----
 Indent style: Tab
 Line width: 80
 Quote style: Double Quotes
+JSX quote style: Double Quotes
+Quote properties: As needed
+Trailing comma: All
+Semicolons: Always
+Arrow parentheses: Always
 -----
+
+```jsx
 <CodeEditor
 	value={formatted_code}
 	language={language}
@@ -63,21 +112,19 @@ Quote style: Double Quotes
 		fontSize: 12,
 		height: "40vh",
 		overflowY: "scroll",
-		fontFamily: "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+		fontFamily:
+			"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
 	}}
 />;
 
 <CodeEditor
-	value={formatWithPrettier(
-		code,
-		{
-			lineWidth,
-			indentStyle,
-			indentWidth,
-			language: isTypeScript ? "ts" : "js",
-			quoteStyle,
-		},
-	)}
+	value={formatWithPrettier(code, {
+		lineWidth,
+		indentStyle,
+		indentWidth,
+		language: isTypeScript ? "ts" : "js",
+		quoteStyle,
+	})}
 	key={code + lineWidth + indentStyle + indentWidth + language + quoteStyle}
 	language={language}
 	placeholder="Prettier Output"
@@ -85,19 +132,79 @@ Quote style: Double Quotes
 		fontSize: 12,
 		height: "50vh",
 		overflowY: "scroll",
-		fontFamily: "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+		fontFamily:
+			"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
 	}}
 />;
 
-let a = <test
-	aVeryLongAttributeName={
-		"WithAVeryLongValuethat exceeds the line width, what happens with ithis"
-	}
+let a = (
+	<test
+		aVeryLongAttributeName={
+			"WithAVeryLongValuethat exceeds the line width, what happens with ithis"
+		}
+	/>
+);
+
+<test
+	{...WithAVeryLongFunctionthat_exceeds_the_line_width_what_happens_with_ithis()}
+/>;
+<div
+	{...[
+		"Chungking Express",
+		"Fallen Angels",
+		"In the Mood for Love",
+		"Days of Living Wild",
+		"Happy Together",
+	]}
 />;
 
+//  https://github.com/rome/tools/issues/2944
+<div className={asdf asdf} />;
+<div
+	className={
+		asdf
+		/* comment */
+	asdf }
+/>;
 
-## Lines exceeding width of 80 characters
+// Wrapping JSX in attribute
+const a = (
+	<Popconfirm
+		title={
+			<span className="popconfirm-test">
+				Are you sure delete this task? let
+			</span>
+		}
+		okText="Yes"
+		cancelText="No"
+		mouseEnterDelay={0}
+		mouseLeaveDelay={0}
+		onVisibleChange={onVisibleChange}
+	>
+		<span>Delete</span>
+	</Popconfirm>
+);
 
-    9: 		fontFamily: "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
-   31: 		fontFamily: "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+<OtherComponent
+	value={
+		new Set(
+			veryLongConditionZzzzzzzzzzzzzzzzzveryLongConditionZzzzzzzzzzzzzzzzzveryLongConditionZzzzzzzzzzzzzzzzz,
+		)
+	}
+/>;
+```
+
+
+
+## Unimplemented nodes/tokens
+
+" asd" => 1130..1134
+"\tasd" => 1182..1186
+# Lines exceeding max width of 80 characters
+```
+   10: 			"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+   30: 			"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+   85: 			veryLongConditionZzzzzzzzzzzzzzzzzveryLongConditionZzzzzzzzzzzzzzzzzveryLongConditionZzzzzzzzzzzzzzzzz,
+```
+
 

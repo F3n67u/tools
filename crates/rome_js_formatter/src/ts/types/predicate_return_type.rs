@@ -1,23 +1,28 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::TsPredicateReturnType;
 use rome_js_syntax::TsPredicateReturnTypeFields;
 
-impl ToFormatElement for TsPredicateReturnType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsPredicateReturnType;
+
+impl FormatNodeRule<TsPredicateReturnType> for FormatTsPredicateReturnType {
+    fn fmt_fields(&self, node: &TsPredicateReturnType, f: &mut JsFormatter) -> FormatResult<()> {
         let TsPredicateReturnTypeFields {
             parameter_name,
             is_token,
             ty,
-        } = self.as_fields();
-        Ok(format_elements![
-            parameter_name.format(formatter)?,
-            space_token(),
-            is_token.format(formatter)?,
-            space_token(),
-            ty.format(formatter)?
-        ])
+        } = node.as_fields();
+        write![
+            f,
+            [
+                parameter_name.format(),
+                space(),
+                is_token.format(),
+                space(),
+                ty.format()
+            ]
+        ]
     }
 }

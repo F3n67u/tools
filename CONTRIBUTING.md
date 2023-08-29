@@ -22,22 +22,94 @@ Rome can be used via the `rome` bin in the `rome_cli` package:
 cargo run --bin rome -- --help
 ```
 
-Rome can be used as a language server by following the instructions below.
+## Install the required tools
+
+We use [Just](https://just.systems/man/en/) to run scripts or tasks, to make our
+life easier.
+
+You can install `just` using cargo:
+
+```shell
+cargo install just
+```
+
+But we **highly recommend** to [install it using an OS package manager](https://github.com/casey/just#packages),
+so you won't need to prefix the every command with `cargo`.
+
+Once installed, run the following command install the required tools:
+
+```shell
+just install-tools
+```
+
+And you're good to go hack with Rome and Rust! 🚀
+
+## Testing
+
+To run the tests, just run
+
+```shell
+just test
+```
+
+If you want to test the tests for a single crate:
+
+```shell
+just test-crate rome_cli
+```
+
+If you to run only the doctests, you would need to pass an argument to the command:
+```shell
+jus test-doc
+```
+
+In some crates, we use snapshot testing. The majority of snapshot testing is done using [`insta`](https://insta.rs).
+`insta` is already installed by the command `just install-tools`.
+
+When a snapshot test fails, you can run:
+- `cargo insta accept` to accept all the changes and update all the snapshots;
+- `cargo insta reject` to reject all the changes;
+- `cargo insta review` to review snapshots singularly;
+
+## Checks
+
+When you finished your work, and you are ready to **commit and open a PR**,
+run the following command:
+
+```shell
+just ready
+```
+
+This command will run the same commands of the CI: format, lint, tests and code generation.
+Eventually everything should be "green" 🟢 and commit all the code that was
+generated.
 
 ## Language Server and VS Code Extension Development
 
-The Rome language server is the binary crate `rome_lsp` which can be built using:
-```
-cargo build --bin rome_lsp
+The Rome language server is the binary crate `rome` which can be built using the command:
+
+```bash
+cargo build --bin rome
 ```
 If benchmarking the language server, be sure to build with the `--release` flag.
 
 The VS Code extension can be installed from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=rome.rome) and can be used with a development build of the language server by setting the `"rome.lspBin"` VS Code setting to the path of the binary:
+
 ```json
-	"rome.lspBin": "/path/to/rome/target/debug/rome_lsp"
+{
+  "rome.lspBin": "/path/to/rome/target/debug/rome"
+}
 ```
 
-To instead build the VS Code extension from source, navigate to the `editors/vscode` directory and run:
+Please note that Windows disallows modifying an executable while it's running,
+meaning you won't be able to recompile the Rome binary once the extension was activated in your editor.
+
+The server is spawned as a background daemon, and continues to run even after the editor is closed.
+
+To stop the running daemon instance use the `rome stop` command, with the editor closed as the extension
+will try to restart it otherwise.
+
+To build the VS Code extension from source, navigate to the `editors/vscode` directory and run:
 
 ```bash
 npm install
@@ -52,28 +124,48 @@ npm run install-extension
 
 The `"rome.lspBin"` VS Code setting will still need to be set as described above.
 
+When the extension is running, it will connect to a daemon server - or it will bootstrap one.
+
+When you apply changes to the binary, you need to do two things:
+- compile the binary
+- kill the daemon process, so you can spawn a new server session
+with the new changes
+
+When the daemon is running, it's possible to inspect its logs in the folder `rome-logs`, placed
+in the temporary folder of the operative system.
+
+
 ### User files
 
 If files specific to your local development environment should be ignored, please add these files to a global git ignore file rather than to a git ignore file within Rome.
 
 You can find more information on this process [here](https://help.github.com/en/github/using-git/ignoring-files#configuring-ignored-files-for-all-repositories-on-your-computer).
 
+## Node.js development
+
+The npm module npm/rome contains Rome's Node JS API that supports different backends:
+- `wasm-nodejs` (WebAssembly)
+- `backend-jsonrpc` (Connection to the daemon)
+
+For testing and developing, you need to build these packages, following the steps:
+1. install [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/) globally;
+2. run the `build` command inside the package `backend-jsonrpc`;
+3. run the `build` and `build:wasm-node-dev` commands inside the package `js-api` (folder `npm/js-api`);
+4. run `pnpm i` inside the package `js-api` (folder `npm/js-api`), this will link the WebAssembly bindings and the
+JSON-RPC bindings;
+
+The tests are run against the compiled files, which means that you need to run the
+`build` command after you implemented features/bug fixes.
+
 ## Website
 
-The [Rome website](https://rome.tools/) is built with [Eleventy](https://www.11ty.dev/). To start a development server you can run the following commands:
+The [Rome website](https://rome.tools/) is built with [Astro](https://astro.build). To start a development server you can run the following commands:
 
 ```bash
 cd website
-npm install
-npm start
+pnpm install
+pnpm start
 ```
-
-## Checks
-
-
-- `cargo lint` is a cargo alias that runs [`clippy`](https://github.com/rust-lang/rust-clippy) - rust official linter - under the hood;
-- `cargo format` is a cargo alias that runs [`rust-fmt`](https://github.com/rust-lang/rustfmt) - rust official formatter - under the hood;
-- `cargo test` will run the suite; make sure to run this command from the root of the project, so it will run the tests of all the internal crates;
 
 ### Generated files
 
@@ -93,6 +185,11 @@ where tests for parser are generated com inline comments found inside
 the source code. Please read [the proper chapter for more information](#write-tests-for-a-parser)
 
 It's strongly advised to **run this command before committing new changes**.
+
+#### `cargo codegen analyzer`
+
+This command will detect linter rules declared in the `analyzers` and `assists` directories in `rome_analyze`, regenerate the index modules `analyzers.rs` and `assists.rs` to import these files, and update the registry builder function in `registry.rs` to include all these rules.
+It will also regenerate the configuration of the rules.
 
 #### `cargo coverage`
 
@@ -133,43 +230,71 @@ test(lint): add more cases to handle invalid rules
 
 When creating a new pull request, it's preferable to use a conventional commit-formatted title, as this title will be used as the default commit message on the squashed commit after merging.
 
-Here are some other scripts that you might find useful.
+Please use the template provided.
 
-#### If you are a core contributor
+#### Changelog
 
-If you are a core contributor, and you have access to create new branches
-from the main repository (not a fork), use these comments to run specific workflows:
+If the PR you're about to open is a bugfix/feature around Rome, you can add a new line to the `CHANGELOG.md`, but it's not mandatory.
+
+At the top of the file you will see a `[Unreleased]` section. The headings divide the sections by "feature", make sure
+to add a new bullet point.
+
+Here's a sample of the headings:
+
+```markdown
+## [Unreleased]
+
+### CLI
+### Configuration
+### Editors
+### Formatter
+### Linter
+### Parser
+### VSCode
+### JavaScript APIs
+```
+
+When you edit a blank section:
+
+- If your PR adds a **breaking change**, create a new heading called `#### BREAKING CHANGES` and add
+bullet point that explains the breaking changes; provide a migration path if possible.
+- If your PR adds a new feature of a fix, create a new heading called `#### Other changes` and
+add a bullet point that explains the fix or the new feature. Make sure that this new heading
+appears after the `#### BREAKING CHANGES` heading.
+
+##### Writing a changelog line
+
+- Use the present tense, e.g. "Add new feature", "Fix edge case".
+- If you fix a bug, please add the link to the issue, e.g. "Fix edge case [#4444]()".
+- Whenever applicable, add a code block to show your new changes. For example, for a new
+rule you might want to show an invalid case, for the formatter you might want to show
+how the new formatting changes, and so on.
+
+#### Documentation
+
+If your PR requires some update on the website (new features, breaking changes, etc.), you should create a new PR once the previous PR is successfully merged.
+When adding new features, the documentation should be part of a new PR, which will be merged right before the release.
+
+#### Magic comments
 
 - `!bench_parser` benchmarks the parser's runtime performance and writes a comment with the results;
 - `!bench_formatter` benchmarks the formatter runtime performance and writes a comment with the results;
+- `!bench_analyzer` benchmarks the analyzer runtime performance and writes a comment with the results;
 
-#### Naming patterns
+### Analyzers and lint rules
 
-1. Forbid a concept
+To know the technical details of how our analyzer works, how to create a rule and how to write tests, please check our [internal
+documentation page](https://rustdocs.rome.tools/rome_analyze/index.html)
 
-	```
-	no<Concept>
-	```
+### JavaScript Parser
 
-	When a rule's sole intention is to **forbid a single concept** - such as disallowing the use of `debugger` statements - the rule should be named using the `no` prefix. For example, the rule to disallow the use of `debugger` statements is named `noDebugger`.
-
-1. Mandate a concept
-
-	```
-	use<Concept>
-	```
-
- 	When a rule's sole intention is to **mandate a single concept** - such as forcing the use of camel-casing - the rule should be named using the `use` prefix. For example, the rule to mandating the use of camel-cased variable names is named `useCamelCase`.
-
-### Parser
-
-- To have a better understanding of our parsing infrastructure, please [read the in-depth section](/crates/rome_js_parser/docs/authoring_parse_rules.md)
-- [write tests for the parser](/crates/rome_js_parser/docs/write_tests.md)
+To know the technical details of how our JavaScript works and how to write test, please check our [internal
+documentation page](https://rustdocs.rome.tools/rome_js_parser/index.html)
 
 ### Formatter
 
-- [write tests for the formatter](/crates/rome_js_formatter/docs/write_tests.md)
-- [implement the formatter](/crates/rome_js_formatter/docs/implement_the_formatter.md)
+To know the technical details of how our formatter works and how to write test, please check our [internal
+documentation page](https://rustdocs.rome.tools/rome_js_formatter/index.html)
 
 ### Versioning
 

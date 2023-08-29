@@ -1,20 +1,31 @@
-use crate::formatter_traits::FormatTokenAndNode;
-
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
+use rome_formatter::{format_args, write};
 
 use rome_js_syntax::JsVariableDeclaration;
 use rome_js_syntax::JsVariableDeclarationFields;
 
-impl ToFormatElement for JsVariableDeclaration {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsVariableDeclarationFields { kind, declarators } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsVariableDeclaration;
 
-        Ok(format_elements![
-            kind.format(formatter)?,
-            space_token(),
-            declarators.format(formatter)?,
-        ])
+impl FormatNodeRule<JsVariableDeclaration> for FormatJsVariableDeclaration {
+    fn fmt_fields(&self, node: &JsVariableDeclaration, f: &mut JsFormatter) -> FormatResult<()> {
+        let JsVariableDeclarationFields {
+            await_token,
+            kind,
+            declarators,
+        } = node.as_fields();
+
+        if let Some(await_token) = await_token {
+            write!(f, [await_token.format(), space()])?;
+        }
+
+        write![
+            f,
+            [group(&format_args![
+                kind.format(),
+                space(),
+                declarators.format()
+            ])]
+        ]
     }
 }

@@ -1,27 +1,46 @@
-use crate::{
-    format_elements, formatter_traits::FormatTokenAndNode, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::prelude::*;
 
+use rome_formatter::{format_args, write};
 use rome_js_syntax::JsFunctionBody;
 use rome_js_syntax::JsFunctionBodyFields;
 
-impl ToFormatElement for JsFunctionBody {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsFunctionBody;
+
+impl FormatNodeRule<JsFunctionBody> for FormatJsFunctionBody {
+    fn fmt_fields(&self, node: &JsFunctionBody, f: &mut JsFormatter) -> FormatResult<()> {
         let JsFunctionBodyFields {
             l_curly_token,
             directives,
             statements,
             r_curly_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        formatter.format_delimited_block_indent(
-            &l_curly_token?,
-            format_elements![
-                directives.format(formatter)?,
-                formatter.format_list(statements),
-            ],
-            &r_curly_token?,
-        )
+        let r_curly_token = r_curly_token?;
+
+        if statements.is_empty() && directives.is_empty() {
+            write!(
+                f,
+                [
+                    l_curly_token.format(),
+                    format_dangling_comments(node.syntax()).with_block_indent(),
+                    r_curly_token.format()
+                ]
+            )
+        } else {
+            write!(
+                f,
+                [
+                    l_curly_token.format(),
+                    block_indent(&format_args![directives.format(), statements.format()]),
+                    r_curly_token.format(),
+                ]
+            )
+        }
+    }
+
+    fn fmt_dangling_comments(&self, _: &JsFunctionBody, _: &mut JsFormatter) -> FormatResult<()> {
+        // Formatted as part of `fmt_fields`
+        Ok(())
     }
 }

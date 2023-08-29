@@ -1,32 +1,29 @@
-import { Command, Session } from "../session";
 import {
 	CancellationToken,
-	ProviderResult,
-	Uri,
-	window,
-	TextDocumentContentProvider,
-	workspace,
-	ViewColumn,
 	Disposable,
-	DocumentLinkProvider,
-	TextDocument,
 	DocumentLink,
+	DocumentLinkProvider,
 	EventEmitter,
-	TextEditor,
+	ProviderResult,
+	TextDocument,
 	TextDocumentChangeEvent,
+	TextDocumentContentProvider,
+	TextEditor,
+	Uri,
+	ViewColumn,
 	languages,
+	window,
+	workspace,
 } from "vscode";
 import { SyntaxTreeParams, syntaxTreeRequest } from "../lsp_requests";
-import { SyntaxTreeDocument } from "./syntaxTreeDocument";
+import { Command, Session } from "../session";
 import { isRomeEditor } from "../utils";
+import { SyntaxTreeDocument } from "./syntaxTreeDocument";
 
 type FilePath = string;
 
 class SyntaxTreeProvider
-	implements
-		TextDocumentContentProvider,
-		DocumentLinkProvider,
-		Disposable
+	implements TextDocumentContentProvider, DocumentLinkProvider, Disposable
 {
 	readonly session: Session;
 	static scheme = "rome";
@@ -79,15 +76,17 @@ class SyntaxTreeProvider
 		}
 	}
 
-	provideTextDocumentContent(uri: Uri, token: CancellationToken): ProviderResult<
-		string
-	> {
-		let documentUri = this.session.editor.document.uri.toString();
+	provideTextDocumentContent(
+		uri: Uri,
+		token: CancellationToken,
+	): ProviderResult<string> {
+		const documentUri = this.session.editor.document.uri.toString();
 		// if the document is already cached, we show it
 		const document = this.documents.get(documentUri);
 		if (document) {
 			return document.value;
 		}
+
 		const params: SyntaxTreeParams = {
 			textDocument: { uri: this.session.editor.document.uri.toString() },
 		};
@@ -95,17 +94,15 @@ class SyntaxTreeProvider
 		// send request to the server and store its content in the cache if successful
 		return this.session.client
 			.sendRequest(syntaxTreeRequest, params, token)
-			.then(
-				(result) => {
-					const document = new SyntaxTreeDocument(uri, result);
-					this.documents.set(documentUri, document);
+			.then((result) => {
+				const document = new SyntaxTreeDocument(uri, result);
+				this.documents.set(documentUri, document);
 
-					return document.value;
-				},
-			);
+				return document.value;
+			});
 	}
 
-	dispose(): any {
+	dispose(): void {
 		this.documents.clear();
 	}
 
@@ -113,9 +110,7 @@ class SyntaxTreeProvider
 		return this.eventEmitter.event;
 	}
 
-	provideDocumentLinks(document: TextDocument, token: CancellationToken): ProviderResult<
-		DocumentLink[]
-	> {
+	provideDocumentLinks(document: TextDocument): ProviderResult<DocumentLink[]> {
 		const doc = this.documents.get(document.uri.toString());
 		if (doc) {
 			return [];
@@ -136,10 +131,9 @@ export function syntaxTree(session: Session): Command {
 	);
 
 	session.subscriptions.push(
-		languages.setLanguageConfiguration(
-			"rome_syntax_tree",
-			{ brackets: [["[", ")"]] },
-		),
+		languages.setLanguageConfiguration("rome_syntax_tree", {
+			brackets: [["[", ")"]],
+		}),
 	);
 
 	// we return a function that instructs the command what to do
@@ -147,9 +141,9 @@ export function syntaxTree(session: Session): Command {
 	return async () => {
 		const document = await workspace.openTextDocument(provider.uri);
 		provider.eventEmitter.fire(provider.uri);
-		void await window.showTextDocument(
-			document,
-			{ viewColumn: ViewColumn.Two, preserveFocus: true },
-		);
+		void (await window.showTextDocument(document, {
+			viewColumn: ViewColumn.Two,
+			preserveFocus: true,
+		}));
 	};
 }

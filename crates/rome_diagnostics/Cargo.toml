@@ -1,16 +1,47 @@
 [package]
-name = "rome_diagnostics"
-version = "0.2.0"
-authors = ["RSLint developers"]
-edition = "2021"
-license = "MIT"
-description = "Pretty error reporting library based on codespan-reporting built for the RSLint project"
+authors.workspace = true
+categories        = ["development-tools"]
+description       = "Pretty error reporting library"
+documentation     = "https://rustdocs.rome.tools/rome_diagnostics/index.html"
+edition.workspace = true
+license.workspace = true
+name              = "rome_diagnostics"
+version           = "0.0.1"
+
+[[example]]
+name = "cli"
+test = true
+
+[[example]]
+name = "fs"
+test = true
+
+[[example]]
+name = "lint"
+test = true
+
+[[example]]
+name = "serde"
+test = true
 
 [dependencies]
-rome_rowan = { path = "../rome_rowan" }
-rome_console = { path = "../rome_console" }
-unicode-width = "0.1.9"
-serde = { version = "1.0.133", optional = true, features = ["derive"] }
-rome_text_edit = { path = "../rome_text_edit" }
-termcolor = "1.1.2"
-colored = "2.0.0"
+backtrace                   = "0.3.66"
+bitflags                    = { workspace = true }
+bpaf                        = { workspace = true }
+rome_console                = { workspace = true, features = ["serde_markup"] }
+rome_diagnostics_categories = { workspace = true, features = ["serde"] }
+rome_diagnostics_macros     = { workspace = true }
+rome_rowan                  = { workspace = true }
+rome_text_edit              = { workspace = true }
+rome_text_size              = { workspace = true }
+schemars                    = { workspace = true, optional = true }
+serde                       = { workspace = true, features = ["derive"] }
+termcolor                   = "1.1.2"
+unicode-width               = "0.1.9"
+
+[features]
+schema = ["schemars", "rome_text_edit/schemars", "rome_diagnostics_categories/schemars"]
+
+[dev-dependencies]
+serde_json = { workspace = true }
+trybuild   = "1.0.80"

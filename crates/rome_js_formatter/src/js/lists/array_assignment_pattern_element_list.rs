@@ -1,9 +1,18 @@
-use crate::utils::array::format_array_node;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+use crate::utils::array::write_array_node;
 use rome_js_syntax::JsArrayAssignmentPatternElementList;
 
-impl ToFormatElement for JsArrayAssignmentPatternElementList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        format_array_node(self, formatter)
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsArrayAssignmentPatternElementList;
+
+impl FormatRule<JsArrayAssignmentPatternElementList> for FormatJsArrayAssignmentPatternElementList {
+    type Context = JsFormatContext;
+
+    fn fmt(
+        &self,
+        node: &JsArrayAssignmentPatternElementList,
+        formatter: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        write_array_node(node, formatter)
     }
 }

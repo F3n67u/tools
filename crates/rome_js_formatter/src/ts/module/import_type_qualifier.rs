@@ -1,15 +1,16 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::TsImportTypeQualifier;
 use rome_js_syntax::TsImportTypeQualifierFields;
 
-impl ToFormatElement for TsImportTypeQualifier {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let TsImportTypeQualifierFields { dot_token, right } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsImportTypeQualifier;
 
-        Ok(format_elements![
-            dot_token.format(formatter)?,
-            right.format(formatter)?,
-        ])
+impl FormatNodeRule<TsImportTypeQualifier> for FormatTsImportTypeQualifier {
+    fn fmt_fields(&self, node: &TsImportTypeQualifier, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsImportTypeQualifierFields { dot_token, right } = node.as_fields();
+
+        write![f, [dot_token.format(), right.format()]]
     }
 }

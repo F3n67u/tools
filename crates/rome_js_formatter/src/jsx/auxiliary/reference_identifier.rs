@@ -1,9 +1,13 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::JsxReferenceIdentifier;
 
-impl ToFormatElement for JsxReferenceIdentifier {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        self.value_token().format(formatter)
+#[derive(Debug, Clone, Default)]
+pub struct FormatJsxReferenceIdentifier;
+
+impl FormatNodeRule<JsxReferenceIdentifier> for FormatJsxReferenceIdentifier {
+    fn fmt_fields(&self, node: &JsxReferenceIdentifier, f: &mut JsFormatter) -> FormatResult<()> {
+        write![f, [node.value_token().format()]]
     }
 }

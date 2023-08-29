@@ -1,21 +1,28 @@
-use crate::formatter_traits::FormatTokenAndNode;
-
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
+use rome_formatter::write;
 
 use rome_js_syntax::JsExport;
 use rome_js_syntax::JsExportFields;
 
-impl ToFormatElement for JsExport {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsExport;
+
+impl FormatNodeRule<JsExport> for FormatJsExport {
+    fn fmt_fields(&self, node: &JsExport, f: &mut JsFormatter) -> FormatResult<()> {
         let JsExportFields {
+            decorators,
             export_token,
             export_clause,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let export_token = export_token.format(formatter)?;
-        let export_clause = export_clause.format(formatter)?;
-        Ok(format_elements![export_token, space_token(), export_clause])
+        write![
+            f,
+            [
+                decorators.format(),
+                export_token.format(),
+                space(),
+                export_clause.format()
+            ]
+        ]
     }
 }

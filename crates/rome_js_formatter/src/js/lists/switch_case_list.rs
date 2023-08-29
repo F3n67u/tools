@@ -1,7 +1,19 @@
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
 use rome_js_syntax::JsSwitchCaseList;
-impl ToFormatElement for JsSwitchCaseList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(formatter.format_list(self.clone()))
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsSwitchCaseList;
+
+impl FormatRule<JsSwitchCaseList> for FormatJsSwitchCaseList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &JsSwitchCaseList, f: &mut JsFormatter) -> FormatResult<()> {
+        let mut join = f.join_nodes_with_hardline();
+
+        for case in node {
+            join.entry(case.syntax(), &format_or_verbatim(case.format()));
+        }
+
+        join.finish()
     }
 }

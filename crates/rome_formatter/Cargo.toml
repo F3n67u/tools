@@ -1,10 +1,38 @@
 [package]
-name = "rome_formatter"
-version = "0.1.0"
-edition = "2021"
+authors.workspace    = true
+description          = "Rome's formatter shared infrastructure"
+documentation        = "https://rustdocs.rome.tools/rome_formatter/index.html"
+edition.workspace    = true
+license.workspace    = true
+name                 = "rome_formatter"
+repository.workspace = true
+version              = "0.0.1"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rome_rowan = { path = "../rome_rowan" }
-tracing = { version = "0.1.31", default-features = false, features = ["std"] }
+cfg-if           = "1.0.0"
+countme          = { workspace = true }
+drop_bomb        = "0.1.5"
+indexmap         = { workspace = true }
+rome_console     = { workspace = true }
+rome_diagnostics = { workspace = true }
+rome_rowan       = { workspace = true }
+rustc-hash       = { workspace = true }
+schemars         = { workspace = true, optional = true }
+serde            = { workspace = true, features = ["derive"], optional = true }
+tracing          = { workspace = true }
+unicode-width    = "0.1.9"
+
+[dev-dependencies]
+insta          = { workspace = true }
+rome_js_parser = { workspace = true }
+rome_js_syntax = { workspace = true }
+
+[features]
+serde = ["dep:serde", "schemars", "rome_rowan/serde"]
+
+# cargo-workspaces metadata
+[package.metadata.workspaces]
+independent = true

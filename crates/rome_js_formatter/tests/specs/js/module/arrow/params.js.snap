@@ -1,8 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/spec_test.rs
-expression: params.js
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: js/module/arrow/params.js
 ---
+
 # Input
+
+```js
 fooooooooooooooooooooooooooooooooooooooooooooooooooo(action => next =>
     dispatch(action),
 );
@@ -325,47 +328,167 @@ foo(
   ) => {}
 );
 
+```
+
+
 =============================
+
 # Outputs
+
 ## Output 1
+
 -----
 Indent style: Tab
 Line width: 80
 Quote style: Double Quotes
+JSX quote style: Double Quotes
+Quote properties: As needed
+Trailing comma: All
+Semicolons: Always
+Arrow parentheses: Always
 -----
+
+```js
 fooooooooooooooooooooooooooooooooooooooooooooooooooo(
 	(action) => (next) => dispatch(action),
+);
+
+foo(
+	({
+		a,
+
+		b,
+	}) => {},
 );
 
 foo(({ a, b }) => {});
 
 foo(({ a, b }) => {});
 
-foo(({ a, b }) => {});
+foo(
+	a,
+	({
+		a,
 
-foo(a, ({ a, b }) => {});
+		b,
+	}) => {},
+);
+
+foo(
+	({
+		a,
+
+		b,
+	}) => a,
+);
 
 foo(({ a, b }) => a);
 
 foo(({ a, b }) => a);
 
-foo(({ a, b }) => a);
+foo(
+	({
+		a: {
+			a,
 
-foo(({ a: { a, b } }) => {});
+			b,
+		},
+	}) => {},
+);
 
-foo(({ a: { b: { c, d } } }) => {});
+foo(
+	({
+		a: {
+			b: {
+				c,
 
-foo(({ a: { b: { c: { d, e } } } }) => {});
+				d,
+			},
+		},
+	}) => {},
+);
 
-foo(({ a: { a, b } }) => a);
+foo(
+	({
+		a: {
+			b: {
+				c: {
+					d,
 
-foo(({ a: { b: { c, d } } }) => a);
+					e,
+				},
+			},
+		},
+	}) => {},
+);
 
-foo(({ a: { b: { c: { d, e } } } }) => a);
+foo(
+	({
+		a: {
+			a,
 
-foo(([{ a: { b: { c: { d, e } } } }]) => {});
+			b,
+		},
+	}) => a,
+);
 
-foo(([...{ a: { b: { c: { d, e } } } }]) => {});
+foo(
+	({
+		a: {
+			b: {
+				c,
+
+				d,
+			},
+		},
+	}) => a,
+);
+
+foo(
+	({
+		a: {
+			b: {
+				c: {
+					d,
+
+					e,
+				},
+			},
+		},
+	}) => a,
+);
+
+foo(
+	([
+		{
+			a: {
+				b: {
+					c: {
+						d,
+
+						e,
+					},
+				},
+			},
+		},
+	]) => {},
+);
+
+foo(
+	([
+		...{
+			a: {
+				b: {
+					c: {
+						d,
+
+						e,
+					},
+				},
+			},
+		}
+	]) => {},
+);
 
 foo(
 	(
@@ -383,7 +506,17 @@ foo(
 	) => {},
 );
 
-foo(({ x: [{ a, b }] }) => {});
+foo(
+	({
+		x: [
+			{
+				a,
+
+				b,
+			},
+		],
+	}) => {},
+);
 
 foo(
 	(
@@ -397,15 +530,73 @@ foo(
 	) => a,
 );
 
-foo(([[{ a, b }]]) => {});
+foo(
+	([
+		[
+			{
+				a,
 
-foo(([[[[{ a, b: { c, d: { e, f } } }]]]]) => {});
+				b,
+			},
+		],
+	]) => {},
+);
 
-foo((...{ a, b }) => {});
+foo(
+	([
+		[
+			[
+				[
+					{
+						a,
+						b: {
+							c,
+							d: {
+								e,
 
-foo((...[{ a, b }]) => {});
+								f,
+							},
+						},
+					},
+				],
+			],
+		],
+	]) => {},
+);
 
-foo(([...[{ a, b }]]) => {});
+foo(
+	(
+		...{
+			a,
+
+			b,
+		}
+	) => {},
+);
+
+foo(
+	(
+		...[
+			{
+				a,
+
+				b,
+			},
+		]
+	) => {},
+);
+
+foo(
+	([
+		...[
+			{
+				a,
+
+				b,
+			},
+		]
+	]) => {},
+);
 
 foo(
 	(
@@ -419,7 +610,15 @@ foo(
 	) => {},
 );
 
-foo((a = (({ a, b }) => {})()) => {});
+foo(
+	(
+		a = (({
+			a,
+
+			b,
+		}) => {})(),
+	) => {},
+);
 
 foo(
 	(
@@ -431,15 +630,343 @@ foo(
 	) => {},
 );
 
-foo((a = ({ a, b }) => {}) => {});
+foo(
+	(
+		a = ({
+			a,
+
+			b,
+		}) => {},
+	) => {},
+);
 
 foo(
 	(
-		a = 1 + f({
+		a = 1 +
+			f({
+				a,
+
+				b,
+			}),
+	) => {},
+);
+```
+
+## Output 2
+
+-----
+Indent style: Tab
+Line width: 80
+Quote style: Double Quotes
+JSX quote style: Double Quotes
+Quote properties: As needed
+Trailing comma: All
+Semicolons: Always
+Arrow parentheses: As needed
+-----
+
+```js
+fooooooooooooooooooooooooooooooooooooooooooooooooooo(
+	action => next => dispatch(action),
+);
+
+foo(
+	({
+		a,
+
+		b,
+	}) => {},
+);
+
+foo(({ a, b }) => {});
+
+foo(({ a, b }) => {});
+
+foo(
+	a,
+	({
+		a,
+
+		b,
+	}) => {},
+);
+
+foo(
+	({
+		a,
+
+		b,
+	}) => a,
+);
+
+foo(({ a, b }) => a);
+
+foo(({ a, b }) => a);
+
+foo(
+	({
+		a: {
+			a,
+
+			b,
+		},
+	}) => {},
+);
+
+foo(
+	({
+		a: {
+			b: {
+				c,
+
+				d,
+			},
+		},
+	}) => {},
+);
+
+foo(
+	({
+		a: {
+			b: {
+				c: {
+					d,
+
+					e,
+				},
+			},
+		},
+	}) => {},
+);
+
+foo(
+	({
+		a: {
+			a,
+
+			b,
+		},
+	}) => a,
+);
+
+foo(
+	({
+		a: {
+			b: {
+				c,
+
+				d,
+			},
+		},
+	}) => a,
+);
+
+foo(
+	({
+		a: {
+			b: {
+				c: {
+					d,
+
+					e,
+				},
+			},
+		},
+	}) => a,
+);
+
+foo(
+	([
+		{
+			a: {
+				b: {
+					c: {
+						d,
+
+						e,
+					},
+				},
+			},
+		},
+	]) => {},
+);
+
+foo(
+	([
+		...{
+			a: {
+				b: {
+					c: {
+						d,
+
+						e,
+					},
+				},
+			},
+		}
+	]) => {},
+);
+
+foo(
+	(
+		n = {
+			a: {
+				b: {
+					c: {
+						d,
+
+						e,
+					},
+				},
+			},
+		},
+	) => {},
+);
+
+foo(
+	({
+		x: [
+			{
+				a,
+
+				b,
+			},
+		],
+	}) => {},
+);
+
+foo(
+	(
+		a = [
+			{
+				a,
+
+				b,
+			},
+		],
+	) => a,
+);
+
+foo(
+	([
+		[
+			{
+				a,
+
+				b,
+			},
+		],
+	]) => {},
+);
+
+foo(
+	([
+		[
+			[
+				[
+					{
+						a,
+						b: {
+							c,
+							d: {
+								e,
+
+								f,
+							},
+						},
+					},
+				],
+			],
+		],
+	]) => {},
+);
+
+foo(
+	(
+		...{
+			a,
+
+			b,
+		}
+	) => {},
+);
+
+foo(
+	(
+		...[
+			{
+				a,
+
+				b,
+			},
+		]
+	) => {},
+);
+
+foo(
+	([
+		...[
+			{
+				a,
+
+				b,
+			},
+		]
+	]) => {},
+);
+
+foo(
+	(
+		a = [
+			{
+				a,
+
+				b,
+			},
+		],
+	) => {},
+);
+
+foo(
+	(
+		a = (({
+			a,
+
+			b,
+		}) => {})(),
+	) => {},
+);
+
+foo(
+	(
+		a = f({
 			a,
 
 			b,
 		}),
 	) => {},
 );
+
+foo(
+	(
+		a = ({
+			a,
+
+			b,
+		}) => {},
+	) => {},
+);
+
+foo(
+	(
+		a = 1 +
+			f({
+				a,
+
+				b,
+			}),
+	) => {},
+);
+```
+
 

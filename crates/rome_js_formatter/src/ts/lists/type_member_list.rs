@@ -1,42 +1,76 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{
-    empty_element, format_elements, if_group_breaks, join_elements, soft_line_break_or_space,
-    token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::TsTypeMemberList;
+use crate::prelude::*;
+use rome_formatter::{write, Buffer};
+use rome_js_syntax::{AnyTsTypeMember, TsTypeMemberList};
+
+use crate::context::Semicolons;
 use rome_rowan::AstNodeList;
 
-impl ToFormatElement for TsTypeMemberList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let items = self.iter();
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsTypeMemberList;
+
+impl FormatRule<TsTypeMemberList> for FormatTsTypeMemberList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &TsTypeMemberList, f: &mut JsFormatter) -> FormatResult<()> {
+        let items = node.iter();
         let last_index = items.len().saturating_sub(1);
 
-        let items = items
-            .enumerate()
-            .map(|(index, element)| {
-                let formatted_element = element.format(formatter)?;
+        let mut joiner = f.join_nodes_with_soft_line();
 
-                let is_verbatim = matches!(
-                    formatted_element.last_element(),
-                    Some(FormatElement::Verbatim(_))
-                );
+        for (index, member) in items.enumerate() {
+            joiner.entry(
+                member.syntax(),
+                &TsTypeMemberItem {
+                    last: index == last_index,
+                    member: &member,
+                },
+            )
+        }
 
-                let separator = if !is_verbatim {
-                    // Children don't format the separator on purpose, so it's up to the parent - this node,
-                    // to decide to print their separator
-                    if index == last_index {
-                        if_group_breaks(token(";"))
+        joiner.finish()
+    }
+}
+
+struct TsTypeMemberItem<'a> {
+    last: bool,
+    member: &'a AnyTsTypeMember,
+}
+
+impl Format<JsFormatContext> for TsTypeMemberItem<'_> {
+    fn fmt(&self, f: &mut JsFormatter) -> FormatResult<()> {
+        let mut is_verbatim = false;
+
+        write!(
+            f,
+            [group(&format_once(|f| {
+                let mut recording = f.start_recording();
+                write!(recording, [self.member.format()])?;
+
+                is_verbatim = recording.stop().end_tag(TagKind::Verbatim).is_some();
+
+                Ok(())
+            }))]
+        )?;
+
+        if !is_verbatim {
+            // Children don't format the separator on purpose, so it's up to the parent - this node,
+            // to decide to print their separator
+            match f.options().semicolons() {
+                Semicolons::Always => {
+                    if self.last {
+                        write!(f, [if_group_breaks(&text(";"))])?;
                     } else {
-                        token(";")
+                        text(";").fmt(f)?;
                     }
-                } else {
-                    empty_element()
-                };
+                }
+                Semicolons::AsNeeded => {
+                    if !self.last {
+                        write!(f, [if_group_fits_on_line(&text(";"))])?;
+                    }
+                }
+            }
+        }
 
-                Ok(format_elements![formatted_element, separator])
-            })
-            .collect::<FormatResult<Vec<_>>>()?;
-
-        Ok(join_elements(soft_line_break_or_space(), items))
+        Ok(())
     }
 }

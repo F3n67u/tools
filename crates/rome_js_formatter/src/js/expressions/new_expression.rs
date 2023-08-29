@@ -1,30 +1,49 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
+use crate::prelude::*;
 
-use crate::{
-    format_elements, space_token, token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsNewExpression, JsSyntaxKind};
+use rome_js_syntax::{JsNewExpressionFields, JsSyntaxNode};
 
-use rome_js_syntax::JsNewExpression;
-use rome_js_syntax::JsNewExpressionFields;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsNewExpression;
 
-impl ToFormatElement for JsNewExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+impl FormatNodeRule<JsNewExpression> for FormatJsNewExpression {
+    fn fmt_fields(&self, node: &JsNewExpression, f: &mut JsFormatter) -> FormatResult<()> {
         let JsNewExpressionFields {
             new_token,
             callee,
             type_arguments,
             arguments,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let arguments =
-            arguments.format_or(formatter, || format_elements![token("("), token(")")])?;
+        write![
+            f,
+            [
+                new_token.format(),
+                space(),
+                callee.format(),
+                type_arguments.format(),
+            ]
+        ]?;
 
-        Ok(format_elements![
-            new_token.format(formatter)?,
-            space_token(),
-            callee.format(formatter)?,
-            type_arguments.format_or_empty(formatter)?,
-            arguments,
-        ])
+        match arguments {
+            Some(arguments) => {
+                write!(f, [arguments.format()])
+            }
+            None => {
+                write!(f, [text("("), text(")")])
+            }
+        }
+    }
+
+    fn needs_parentheses(&self, item: &JsNewExpression) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for JsNewExpression {
+    fn needs_parentheses_with_parent(&self, parent: &JsSyntaxNode) -> bool {
+        matches!(parent.kind(), JsSyntaxKind::JS_EXTENDS_CLAUSE)
     }
 }

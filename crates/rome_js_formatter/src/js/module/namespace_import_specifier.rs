@@ -1,30 +1,33 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-
+use rome_formatter::write;
 use rome_js_syntax::JsNamespaceImportSpecifier;
 use rome_js_syntax::JsNamespaceImportSpecifierFields;
 
-impl ToFormatElement for JsNamespaceImportSpecifier {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsNamespaceImportSpecifier;
+
+impl FormatNodeRule<JsNamespaceImportSpecifier> for FormatJsNamespaceImportSpecifier {
+    fn fmt_fields(
+        &self,
+        node: &JsNamespaceImportSpecifier,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
         let JsNamespaceImportSpecifierFields {
             star_token,
             as_token,
             local_name,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let star = star_token.format(formatter)?;
-        let as_token = as_token.format(formatter)?;
-        let local_name = local_name.format(formatter)?;
-
-        Ok(format_elements![
-            star,
-            space_token(),
-            as_token,
-            space_token(),
-            local_name
-        ])
+        write![
+            f,
+            [
+                star_token.format(),
+                space(),
+                as_token.format(),
+                space(),
+                local_name.format()
+            ]
+        ]
     }
 }

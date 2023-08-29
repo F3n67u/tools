@@ -1,7 +1,7 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-mod export_as_namespace_clause;
-mod export_assignment_clause;
-mod export_declare_clause;
-mod import_type;
-mod import_type_qualifier;
+pub(crate) mod export_as_namespace_clause;
+pub(crate) mod export_assignment_clause;
+pub(crate) mod export_declare_clause;
+pub(crate) mod import_type;
+pub(crate) mod import_type_qualifier;

@@ -1,27 +1,57 @@
-use crate::utils::format_interpreter;
-use crate::{
-    format_elements, formatter_traits::FormatTokenAndNode, hard_line_break, FormatElement,
-    FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
+use crate::utils::FormatInterpreterToken;
+use rome_formatter::write;
 
 use rome_js_syntax::JsScript;
 use rome_js_syntax::JsScriptFields;
 
-impl ToFormatElement for JsScript {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsScript;
+
+impl FormatNodeRule<JsScript> for FormatJsScript {
+    fn fmt_fields(&self, node: &JsScript, f: &mut JsFormatter) -> FormatResult<()> {
         let JsScriptFields {
             interpreter_token,
             directives,
             statements,
             eof_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            format_interpreter(interpreter_token, formatter)?,
-            directives.format(formatter)?,
-            formatter.format_list(statements),
-            eof_token.format(formatter)?,
-            hard_line_break()
-        ])
+        write![
+            f,
+            [
+                FormatInterpreterToken::new(interpreter_token.as_ref()),
+                format_leading_comments(node.syntax()),
+                directives.format(),
+            ]
+        ]?;
+
+        write![
+            f,
+            [
+                statements.format(),
+                format_trailing_comments(node.syntax()),
+                format_removed(&eof_token?),
+                hard_line_break()
+            ]
+        ]
+    }
+
+    fn fmt_leading_comments(&self, _: &JsScript, _: &mut JsFormatter) -> FormatResult<()> {
+        // Formatted as part of `fmt_fields`
+        Ok(())
+    }
+
+    fn fmt_dangling_comments(&self, node: &JsScript, f: &mut JsFormatter) -> FormatResult<()> {
+        debug_assert!(
+            !f.comments().has_dangling_comments(node.syntax()),
+            "Scrip should never have dangling comments."
+        );
+        Ok(())
+    }
+
+    fn fmt_trailing_comments(&self, _: &JsScript, _: &mut JsFormatter) -> FormatResult<()> {
+        // Formatted as part of `fmt_fields`
+        Ok(())
     }
 }

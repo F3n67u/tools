@@ -1,11 +1,18 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsThisParameter;
+use crate::prelude::*;
 
-impl ToFormatElement for TsThisParameter {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let this = self.this_token().format(formatter)?;
-        let type_annotation = self.type_annotation().format_or_empty(formatter)?;
-        Ok(format_elements![this, type_annotation,])
+use rome_formatter::write;
+use rome_js_syntax::{TsThisParameter, TsThisParameterFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsThisParameter;
+
+impl FormatNodeRule<TsThisParameter> for FormatTsThisParameter {
+    fn fmt_fields(&self, node: &TsThisParameter, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsThisParameterFields {
+            this_token,
+            type_annotation,
+        } = node.as_fields();
+
+        write![f, [this_token.format(), type_annotation.format()]]
     }
 }

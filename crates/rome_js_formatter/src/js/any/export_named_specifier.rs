@@ -1,12 +1,17 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyExportNamedSpecifier;
-impl ToFormatElement for JsAnyExportNamedSpecifier {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsExportNamedShorthandSpecifier(node) => node.to_format_element(formatter),
-            Self::JsExportNamedSpecifier(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyJsExportNamedSpecifier;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsExportNamedSpecifier;
+impl FormatRule<AnyJsExportNamedSpecifier> for FormatAnyJsExportNamedSpecifier {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsExportNamedSpecifier, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsExportNamedSpecifier::JsExportNamedShorthandSpecifier(node) => {
+                node.format().fmt(f)
+            }
+            AnyJsExportNamedSpecifier::JsExportNamedSpecifier(node) => node.format().fmt(f),
         }
     }
 }

@@ -1,10 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 149
-expression: return-statement.js
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/comments/return-statement.js
 ---
+
 # Input
+
 ```js
 function jsx() {
   return (
@@ -130,7 +131,33 @@ function inlineComment() {
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -80,10 +80,12 @@
+ }
+ 
+ function memberInAndOutWithCalls() {
+-  return aFunction
+-    .b // Reason for a
+-    ()
+-    .c.d();
++  return (
++    // Reason for a
++    aFunction
++      .b()
++      .c.d()
++  );
+ }
+ 
+ function excessiveEverything() {
+```
+
 # Output
+
 ```js
 function jsx() {
   return (
@@ -153,83 +180,79 @@ function numericLiteralNoParen() {
 function logical() {
   return (
     // Reason for 42
-    42
-  ) && 84;
+    42 && 84
+  );
 }
 
 function binary() {
   return (
     // Reason for 42
-    42
-  ) * 84;
+    42 * 84
+  );
 }
 
 function binaryInBinaryLeft() {
   return (
-    (
-      // Reason for 42
-      42
-    ) * 84
-  ) + 2;
+    // Reason for 42
+    42 * 84 + 2
+  );
 }
 
 function binaryInBinaryRight() {
   return (
     // Reason for 42
-    42
-  ) + (84 * 2);
+    42 + 84 * 2
+  );
 }
 
 function conditional() {
   return (
     // Reason for 42
-    42
-  ) ? 1 : 2;
+    42 ? 1 : 2
+  );
 }
 
 function binaryInConditional() {
   return (
     // Reason for 42
-    42
-  ) * 3 ? 1 : 2;
+    42 * 3 ? 1 : 2
+  );
 }
 
 function call() {
   return (
     // Reason for a
-    a
-  )();
+    a()
+  );
 }
 
 function memberInside() {
   return (
     // Reason for a.b
-    a.b
-  ).c;
+    a.b.c
+  );
 }
 
 function memberOutside() {
   return (
     // Reason for a
-    a
-  ).b.c;
+    a.b.c
+  );
 }
 
 function memberInAndOutWithCalls() {
   return (
     // Reason for a
-    aFunction.b()
-  ).c.d();
+    aFunction
+      .b()
+      .c.d()
+  );
 }
 
 function excessiveEverything() {
   return (
     // Reason for stuff
-    (a.b() * 3) + 4
-      ? (a`hi`, 1)
-        ? 1
-        : 1
-      : 1
+    a.b() * 3 + 4 ? ((a`hi`, 1) ? 1 : 1) : 1
   );
 }
 
@@ -251,16 +274,13 @@ function sequenceExpressionInside() {
 function taggedTemplate() {
   return (
     // Reason for a
-    a
-  )`b`;
+    a`b`
+  );
 }
 
 function inlineComment() {
-  return (
-    /* hi */ 42
-  ) || 42;
+  return /* hi */ 42 || 42;
 }
-
 ```
 
 

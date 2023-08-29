@@ -1,9 +1,14 @@
-use crate::{concat_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::js::lists::template_element_list::AnyTemplateElementList;
+use crate::prelude::*;
 use rome_js_syntax::TsTemplateElementList;
-use rome_rowan::AstNodeList;
 
-impl ToFormatElement for TsTemplateElementList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(concat_elements(formatter.format_nodes(self.iter())?))
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsTemplateElementList;
+
+impl FormatRule<TsTemplateElementList> for FormatTsTemplateElementList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &TsTemplateElementList, f: &mut JsFormatter) -> FormatResult<()> {
+        AnyTemplateElementList::TsTemplateElementList(node.clone()).fmt(f)
     }
 }

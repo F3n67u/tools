@@ -1,10 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 125
-expression: fsharp_style_pipeline_operator.js
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: js/pipeline-operator/fsharp_style_pipeline_operator.js
 ---
+
 # Input
+
 ```js
 promise
   |> await
@@ -58,7 +59,95 @@ const f = x |> (f) => f |> f;
 
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,34 +1,57 @@
+ promise
+   |> await
+-  |> (x) => doubleSay(x, ", ")
++  |> x
++=> doubleSay(x, ', ')
+   |> capitalize
+-  |> (x) => x + "!"
+-  |> (x) => new User.Message(x)
+-  |> (x) => stream.write(x)
++  |> x => x + '!'
++  |> x => new User.Message(x)
++  |> x => stream.write(x)
+   |> await
+-  |> console.log;
++  |> console.log
+ 
+-const result = "hello" |> doubleSay |> capitalize |> exclaim;
++const result = "hello"
++  |> doubleSay
++  |> capitalize
++  |> exclaim;
+ 
+-const newScore =
+-  person.score |> double |> (n) => add(7, n) |> (n) => boundScore(0, 100, n);
++const newScore = person.score
++  |> double
++  |> n
++=> add(7, n)
++  |> n => boundScore(0, 100, n)
+ 
+-const user =
+-  url |> api.get |> await |> (r) => r.json() |> await |> (j) => j.data.user;
++const user = url
++  |> api.get
++  |> await
++  |> r
++=> r.json()
++  |> await
++  |> j => j.data.user
+ 
+-const f = (x) => x |> (y) => y + 1 |> (z) => z * y;
++const f = (x) => (x |> (y)
++=> y + 1)
++  |> (z) => z * y
+ 
+-const _f = (x) => x |> (y) => y + 1 |> (z) => z * y;
++const _f = (x) => x
++  |> (y)
++=> y + 1
++  |> (z) => z * y
+ 
+-const g = (x) => x |> (y) => (y + 1 |> (z) => z * y);
++const g = (x) => x
++  |> (y)
++=> (y + 1 |> (z) => z * y)
+ 
+-const _g = (x) => x |> ((y) => (y + 1 |> (z) => z * y));
++const _g = (x) => x
++  |> (y => (y + 1 |> (z)
++=> z * y))
+ 
+-const __g = (x) =>
+-  x
+-  |> ((y) => {
+-    return y + 1 |> (z) => z * y;
+-  });
++const __g = (x) => x
++  |> (
++    y => {
++      return (y + 1 |> (z) => z * y);
++    }
++  )
+ 
+-const f = x + ((f) => f |> f);
+-const f = x |> (f) => f |> f;
++const f = x + ((f) => (f |> f));
++const f = x |> (f)
++=> f |> f
+```
+
 # Output
+
 ```js
 promise
   |> await
@@ -117,207 +206,500 @@ const __g = (x) => x
 const f = x + ((f) => (f |> f));
 const f = x |> (f)
 => f |> f
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-  ┌─ fsharp_style_pipeline_operator.js:2:4
-  │
-2 │   |> await
-  │    ^ This operator requires a left hand side value
+fsharp_style_pipeline_operator.js:2:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected an unary expression but instead found '|'
-  ┌─ fsharp_style_pipeline_operator.js:3:3
-  │
-3 │   |> x => doubleSay(x, ', ')
-  │   ^ Expected an unary expression here
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    1 │ promise
+  > 2 │   |> await
+      │    ^
+    3 │   |> x => doubleSay(x, ', ')
+    4 │   |> capitalize
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:3:3 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-  ┌─ fsharp_style_pipeline_operator.js:3:4
-  │
-3 │   |> x => doubleSay(x, ', ')
-  │    ^ This operator requires a left hand side value
+  × expected an unary expression but instead found '|'
+  
+    1 │ promise
+    2 │   |> await
+  > 3 │   |> x => doubleSay(x, ', ')
+      │   ^
+    4 │   |> capitalize
+    5 │   |> x => x + '!'
+  
+  i Expected an unary expression here
+  
+    1 │ promise
+    2 │   |> await
+  > 3 │   |> x => doubleSay(x, ', ')
+      │   ^
+    4 │   |> capitalize
+    5 │   |> x => x + '!'
+  
+fsharp_style_pipeline_operator.js:3:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected a semicolon or an implicit semicolon after a statement, but found none
-  ┌─ fsharp_style_pipeline_operator.js:3:8
-  │  
-1 │ ┌ promise
-2 │ │   |> await
-3 │ │   |> x => doubleSay(x, ', ')
-  │ │        ^^ An explicit or implicit semicolon is expected here...
-  │ └─────────' ...Which is required to end this statement
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    1 │ promise
+    2 │   |> await
+  > 3 │   |> x => doubleSay(x, ', ')
+      │    ^
+    4 │   |> capitalize
+    5 │   |> x => x + '!'
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:3:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:12:4
-   │
-12 │   |> doubleSay
-   │    ^ This operator requires a left hand side value
+  × Expected a semicolon or an implicit semicolon after a statement, but found none
+  
+    1 │ promise
+    2 │   |> await
+  > 3 │   |> x => doubleSay(x, ', ')
+      │        ^^
+    4 │   |> capitalize
+    5 │   |> x => x + '!'
+  
+  i An explicit or implicit semicolon is expected here...
+  
+    1 │ promise
+    2 │   |> await
+  > 3 │   |> x => doubleSay(x, ', ')
+      │        ^^
+    4 │   |> capitalize
+    5 │   |> x => x + '!'
+  
+  i ...Which is required to end this statement
+  
+  > 1 │ promise
+      │ ^^^^^^^
+  > 2 │   |> await
+  > 3 │   |> x => doubleSay(x, ', ')
+      │   ^^^^^^^
+    4 │   |> capitalize
+    5 │   |> x => x + '!'
+  
+fsharp_style_pipeline_operator.js:12:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:13:4
-   │
-13 │   |> capitalize
-   │    ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    11 │ const result = "hello"
+  > 12 │   |> doubleSay
+       │    ^
+    13 │   |> capitalize
+    14 │   |> exclaim;
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:13:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:14:4
-   │
-14 │   |> exclaim;
-   │    ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    11 │ const result = "hello"
+    12 │   |> doubleSay
+  > 13 │   |> capitalize
+       │    ^
+    14 │   |> exclaim;
+    15 │ 
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:14:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:17:4
-   │
-17 │   |> double
-   │    ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    12 │   |> doubleSay
+    13 │   |> capitalize
+  > 14 │   |> exclaim;
+       │    ^
+    15 │ 
+    16 │ const newScore = person.score
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:17:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:18:4
-   │
-18 │   |> n => add(7, n)
-   │    ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    16 │ const newScore = person.score
+  > 17 │   |> double
+       │    ^
+    18 │   |> n => add(7, n)
+    19 │   |> n => boundScore(0, 100, n);
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:18:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected a semicolon or an implicit semicolon after a statement, but found none
-   ┌─ fsharp_style_pipeline_operator.js:18:8
-   │  
-16 │ ┌ const newScore = person.score
-17 │ │   |> double
-18 │ │   |> n => add(7, n)
-   │ │        ^^ An explicit or implicit semicolon is expected here...
-   │ └───────' ...Which is required to end this statement
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    16 │ const newScore = person.score
+    17 │   |> double
+  > 18 │   |> n => add(7, n)
+       │    ^
+    19 │   |> n => boundScore(0, 100, n);
+    20 │ 
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:18:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:22:4
-   │
-22 │   |> api.get
-   │    ^ This operator requires a left hand side value
+  × Expected a semicolon or an implicit semicolon after a statement, but found none
+  
+    16 │ const newScore = person.score
+    17 │   |> double
+  > 18 │   |> n => add(7, n)
+       │        ^^
+    19 │   |> n => boundScore(0, 100, n);
+    20 │ 
+  
+  i An explicit or implicit semicolon is expected here...
+  
+    16 │ const newScore = person.score
+    17 │   |> double
+  > 18 │   |> n => add(7, n)
+       │        ^^
+    19 │   |> n => boundScore(0, 100, n);
+    20 │ 
+  
+  i ...Which is required to end this statement
+  
+    14 │   |> exclaim;
+    15 │ 
+  > 16 │ const newScore = person.score
+       │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  > 17 │   |> double
+  > 18 │   |> n => add(7, n)
+       │   ^^^^^
+    19 │   |> n => boundScore(0, 100, n);
+    20 │ 
+  
+fsharp_style_pipeline_operator.js:22:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:23:4
-   │
-23 │   |> await
-   │    ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    21 │ const user = url
+  > 22 │   |> api.get
+       │    ^
+    23 │   |> await
+    24 │   |> r => r.json()
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:23:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected an unary expression but instead found '|'
-   ┌─ fsharp_style_pipeline_operator.js:24:3
-   │
-24 │   |> r => r.json()
-   │   ^ Expected an unary expression here
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    21 │ const user = url
+    22 │   |> api.get
+  > 23 │   |> await
+       │    ^
+    24 │   |> r => r.json()
+    25 │   |> await
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:24:3 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:24:4
-   │
-24 │   |> r => r.json()
-   │    ^ This operator requires a left hand side value
+  × expected an unary expression but instead found '|'
+  
+    22 │   |> api.get
+    23 │   |> await
+  > 24 │   |> r => r.json()
+       │   ^
+    25 │   |> await
+    26 │   |> j => j.data.user;
+  
+  i Expected an unary expression here
+  
+    22 │   |> api.get
+    23 │   |> await
+  > 24 │   |> r => r.json()
+       │   ^
+    25 │   |> await
+    26 │   |> j => j.data.user;
+  
+fsharp_style_pipeline_operator.js:24:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected a semicolon or an implicit semicolon after a statement, but found none
-   ┌─ fsharp_style_pipeline_operator.js:24:8
-   │  
-21 │ ┌ const user = url
-22 │ │   |> api.get
-23 │ │   |> await
-24 │ │   |> r => r.json()
-   │ │        ^^ An explicit or implicit semicolon is expected here...
-   │ └───────' ...Which is required to end this statement
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    22 │   |> api.get
+    23 │   |> await
+  > 24 │   |> r => r.json()
+       │    ^
+    25 │   |> await
+    26 │   |> j => j.data.user;
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:24:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:28:22
-   │
-28 │ const f = (x) => (x |> (y) => y + 1)
-   │                      ^ This operator requires a left hand side value
+  × Expected a semicolon or an implicit semicolon after a statement, but found none
+  
+    22 │   |> api.get
+    23 │   |> await
+  > 24 │   |> r => r.json()
+       │        ^^
+    25 │   |> await
+    26 │   |> j => j.data.user;
+  
+  i An explicit or implicit semicolon is expected here...
+  
+    22 │   |> api.get
+    23 │   |> await
+  > 24 │   |> r => r.json()
+       │        ^^
+    25 │   |> await
+    26 │   |> j => j.data.user;
+  
+  i ...Which is required to end this statement
+  
+    19 │   |> n => boundScore(0, 100, n);
+    20 │ 
+  > 21 │ const user = url
+       │ ^^^^^^^^^^^^^^^^
+  > 22 │   |> api.get
+  > 23 │   |> await
+  > 24 │   |> r => r.json()
+       │   ^^^^^
+    25 │   |> await
+    26 │   |> j => j.data.user;
+  
+fsharp_style_pipeline_operator.js:28:22 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `')'` but instead found `=>`
-   ┌─ fsharp_style_pipeline_operator.js:28:28
-   │
-28 │ const f = (x) => (x |> (y) => y + 1)
-   │                            ^^ unexpected
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    26 │   |> j => j.data.user;
+    27 │ 
+  > 28 │ const f = (x) => (x |> (y) => y + 1)
+       │                      ^
+    29 │   |> (z) => z * y
+    30 │ 
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:28:28 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:32:4
-   │
-32 │   |> (y) => y + 1
-   │    ^ This operator requires a left hand side value
+  × expected `)` but instead found `=>`
+  
+    26 │   |> j => j.data.user;
+    27 │ 
+  > 28 │ const f = (x) => (x |> (y) => y + 1)
+       │                            ^^
+    29 │   |> (z) => z * y
+    30 │ 
+  
+  i Remove =>
+  
+fsharp_style_pipeline_operator.js:32:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected a semicolon or an implicit semicolon after a statement, but found none
-   ┌─ fsharp_style_pipeline_operator.js:32:10
-   │  
-31 │ ┌ const _f = (x) => x
-32 │ │   |> (y) => y + 1
-   │ │          ^^ An explicit or implicit semicolon is expected here...
-   │ └─────────' ...Which is required to end this statement
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    31 │ const _f = (x) => x
+  > 32 │   |> (y) => y + 1
+       │    ^
+    33 │   |> (z) => z * y
+    34 │ 
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:32:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:36:4
-   │
-36 │   |> (y) => (y + 1 |> (z) => z * y)
-   │    ^ This operator requires a left hand side value
+  × Expected a semicolon or an implicit semicolon after a statement, but found none
+  
+    31 │ const _f = (x) => x
+  > 32 │   |> (y) => y + 1
+       │          ^^
+    33 │   |> (z) => z * y
+    34 │ 
+  
+  i An explicit or implicit semicolon is expected here...
+  
+    31 │ const _f = (x) => x
+  > 32 │   |> (y) => y + 1
+       │          ^^
+    33 │   |> (z) => z * y
+    34 │ 
+  
+  i ...Which is required to end this statement
+  
+    29 │   |> (z) => z * y
+    30 │ 
+  > 31 │ const _f = (x) => x
+       │ ^^^^^^^^^^^^^^^^^^^
+  > 32 │   |> (y) => y + 1
+       │   ^^^^^^^
+    33 │   |> (z) => z * y
+    34 │ 
+  
+fsharp_style_pipeline_operator.js:36:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected a semicolon or an implicit semicolon after a statement, but found none
-   ┌─ fsharp_style_pipeline_operator.js:36:10
-   │  
-35 │ ┌ const g = (x) => x
-36 │ │   |> (y) => (y + 1 |> (z) => z * y)
-   │ │          ^^ An explicit or implicit semicolon is expected here...
-   │ └─────────' ...Which is required to end this statement
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    35 │ const g = (x) => x
+  > 36 │   |> (y) => (y + 1 |> (z) => z * y)
+       │    ^
+    37 │ 
+    38 │ const _g = (x) => x
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:36:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:39:4
-   │
-39 │   |> (y => (y + 1 |> (z) => z * y))
-   │    ^ This operator requires a left hand side value
+  × Expected a semicolon or an implicit semicolon after a statement, but found none
+  
+    35 │ const g = (x) => x
+  > 36 │   |> (y) => (y + 1 |> (z) => z * y)
+       │          ^^
+    37 │ 
+    38 │ const _g = (x) => x
+  
+  i An explicit or implicit semicolon is expected here...
+  
+    35 │ const g = (x) => x
+  > 36 │   |> (y) => (y + 1 |> (z) => z * y)
+       │          ^^
+    37 │ 
+    38 │ const _g = (x) => x
+  
+  i ...Which is required to end this statement
+  
+    33 │   |> (z) => z * y
+    34 │ 
+  > 35 │ const g = (x) => x
+       │ ^^^^^^^^^^^^^^^^^^
+  > 36 │   |> (y) => (y + 1 |> (z) => z * y)
+       │   ^^^^^^^
+    37 │ 
+    38 │ const _g = (x) => x
+  
+fsharp_style_pipeline_operator.js:39:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:39:20
-   │
-39 │   |> (y => (y + 1 |> (z) => z * y))
-   │                    ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    38 │ const _g = (x) => x
+  > 39 │   |> (y => (y + 1 |> (z) => z * y))
+       │    ^
+    40 │ 
+    41 │ const __g = (x) => x
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:39:20 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `')'` but instead found `=>`
-   ┌─ fsharp_style_pipeline_operator.js:39:26
-   │
-39 │   |> (y => (y + 1 |> (z) => z * y))
-   │                          ^^ unexpected
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    38 │ const _g = (x) => x
+  > 39 │   |> (y => (y + 1 |> (z) => z * y))
+       │                    ^
+    40 │ 
+    41 │ const __g = (x) => x
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:39:26 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:42:4
-   │
-42 │   |> (
-   │    ^ This operator requires a left hand side value
+  × expected `)` but instead found `=>`
+  
+    38 │ const _g = (x) => x
+  > 39 │   |> (y => (y + 1 |> (z) => z * y))
+       │                          ^^
+    40 │ 
+    41 │ const __g = (x) => x
+  
+  i Remove =>
+  
+fsharp_style_pipeline_operator.js:42:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:44:22
-   │
-44 │       return (y + 1 |> (z) => z * y);
-   │                      ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    41 │ const __g = (x) => x
+  > 42 │   |> (
+       │    ^
+    43 │     y => {
+    44 │       return (y + 1 |> (z) => z * y);
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:44:22 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: expected `')'` but instead found `=>`
-   ┌─ fsharp_style_pipeline_operator.js:44:28
-   │
-44 │       return (y + 1 |> (z) => z * y);
-   │                            ^^ unexpected
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    42 │   |> (
+    43 │     y => {
+  > 44 │       return (y + 1 |> (z) => z * y);
+       │                      ^
+    45 │     }
+    46 │   )
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:44:28 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:48:27
-   │
-48 │ const f = x + ((f) => (f |> f));
-   │                           ^ This operator requires a left hand side value
+  × expected `)` but instead found `=>`
+  
+    42 │   |> (
+    43 │     y => {
+  > 44 │       return (y + 1 |> (z) => z * y);
+       │                            ^^
+    45 │     }
+    46 │   )
+  
+  i Remove =>
+  
+fsharp_style_pipeline_operator.js:48:27 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected an expression for the left hand side of the `>` operator.
-   ┌─ fsharp_style_pipeline_operator.js:49:14
-   │
-49 │ const f = x |> (f) => f |> f;
-   │              ^ This operator requires a left hand side value
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    46 │   )
+    47 │ 
+  > 48 │ const f = x + ((f) => (f |> f));
+       │                           ^
+    49 │ const f = x |> (f) => f |> f;
+    50 │ 
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:49:14 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: Expected a semicolon or an implicit semicolon after a statement, but found none
-   ┌─ fsharp_style_pipeline_operator.js:49:20
-   │
-49 │ const f = x |> (f) => f |> f;
-   │ -------------------^^ An explicit or implicit semicolon is expected here...
-   │ │                   
-   │ ...Which is required to end this statement
+  × Expected an expression for the left hand side of the `>` operator.
+  
+    48 │ const f = x + ((f) => (f |> f));
+  > 49 │ const f = x |> (f) => f |> f;
+       │              ^
+    50 │ 
+  
+  i This operator requires a left hand side value
+  
+fsharp_style_pipeline_operator.js:49:20 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Expected a semicolon or an implicit semicolon after a statement, but found none
+  
+    48 │ const f = x + ((f) => (f |> f));
+  > 49 │ const f = x |> (f) => f |> f;
+       │                    ^^
+    50 │ 
+  
+  i An explicit or implicit semicolon is expected here...
+  
+    48 │ const f = x + ((f) => (f |> f));
+  > 49 │ const f = x |> (f) => f |> f;
+       │                    ^^
+    50 │ 
+  
+  i ...Which is required to end this statement
+  
+    48 │ const f = x + ((f) => (f |> f));
+  > 49 │ const f = x |> (f) => f |> f;
+       │ ^^^^^^^^^^^^^^^^^^^
+    50 │ 
+  
 
 ```
 

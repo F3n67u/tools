@@ -4,6 +4,7 @@ JsModule {
     items: JsModuleItemList [
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@0..4 "let" [] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -31,6 +32,7 @@ JsModule {
                 l_angle_token: L_ANGLE@18..19 "<" [] [],
                 items: TsTypeParameterList [
                     TsTypeParameter {
+                        modifiers: TsTypeParameterModifierList [],
                         name: TsTypeParameterName {
                             ident_token: IDENT@19..20 "A" [] [],
                         },
@@ -304,8 +306,9 @@ JsModule {
   2: JS_MODULE_ITEM_LIST@0..239
     0: JS_VARIABLE_STATEMENT@0..11
       0: JS_VARIABLE_DECLARATION@0..10
-        0: LET_KW@0..4 "let" [] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@4..10
+        0: (empty)
+        1: LET_KW@0..4 "let" [] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@4..10
           0: JS_VARIABLE_DECLARATOR@4..10
             0: JS_IDENTIFIER_BINDING@4..5
               0: IDENT@4..5 "a" [] []
@@ -323,10 +326,11 @@ JsModule {
         0: L_ANGLE@18..19 "<" [] []
         1: TS_TYPE_PARAMETER_LIST@19..20
           0: TS_TYPE_PARAMETER@19..20
-            0: TS_TYPE_PARAMETER_NAME@19..20
+            0: TS_TYPE_PARAMETER_MODIFIER_LIST@19..19
+            1: TS_TYPE_PARAMETER_NAME@19..20
               0: IDENT@19..20 "A" [] []
-            1: (empty)
             2: (empty)
+            3: (empty)
         2: R_ANGLE@20..22 ">" [] [Whitespace(" ")]
       3: EQ@22..24 "=" [] [Whitespace(" ")]
       4: TS_OBJECT_TYPE@24..32

@@ -1,16 +1,19 @@
-//! Generated file, do not edit by hand, see `xtask/codegen`
+//! This is a generated file. Don't modify it by hand! Run 'cargo codegen formatter' to re-generate the file.
 
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::JsAnyLiteralExpression;
-impl ToFormatElement for JsAnyLiteralExpression {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        match self {
-            Self::JsStringLiteralExpression(node) => node.to_format_element(formatter),
-            Self::JsNumberLiteralExpression(node) => node.to_format_element(formatter),
-            Self::JsBigIntLiteralExpression(node) => node.to_format_element(formatter),
-            Self::JsBooleanLiteralExpression(node) => node.to_format_element(formatter),
-            Self::JsNullLiteralExpression(node) => node.to_format_element(formatter),
-            Self::JsRegexLiteralExpression(node) => node.to_format_element(formatter),
+use crate::prelude::*;
+use rome_js_syntax::AnyJsLiteralExpression;
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatAnyJsLiteralExpression;
+impl FormatRule<AnyJsLiteralExpression> for FormatAnyJsLiteralExpression {
+    type Context = JsFormatContext;
+    fn fmt(&self, node: &AnyJsLiteralExpression, f: &mut JsFormatter) -> FormatResult<()> {
+        match node {
+            AnyJsLiteralExpression::JsStringLiteralExpression(node) => node.format().fmt(f),
+            AnyJsLiteralExpression::JsNumberLiteralExpression(node) => node.format().fmt(f),
+            AnyJsLiteralExpression::JsBigintLiteralExpression(node) => node.format().fmt(f),
+            AnyJsLiteralExpression::JsBooleanLiteralExpression(node) => node.format().fmt(f),
+            AnyJsLiteralExpression::JsNullLiteralExpression(node) => node.format().fmt(f),
+            AnyJsLiteralExpression::JsRegexLiteralExpression(node) => node.format().fmt(f),
         }
     }
 }

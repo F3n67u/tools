@@ -4,6 +4,7 @@ JsModule {
     items: JsModuleItemList [
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@0..4 "let" [] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -19,6 +20,7 @@ JsModule {
         },
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@6..11 "let" [Newline("\n")] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -34,6 +36,7 @@ JsModule {
         },
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@13..18 "let" [Newline("\n")] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -49,6 +52,7 @@ JsModule {
         },
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@20..25 "let" [Newline("\n")] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -64,6 +68,7 @@ JsModule {
         },
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@29..34 "let" [Newline("\n")] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -124,8 +129,8 @@ JsModule {
                         },
                         JsxExpressionChild {
                             l_curly_token: L_CURLY@62..63 "{" [] [],
-                            expression: JsBigIntLiteralExpression {
-                                value_token: JS_BIG_INT_LITERAL@63..80 "9007199254740991n" [] [],
+                            expression: JsBigintLiteralExpression {
+                                value_token: JS_BIGINT_LITERAL@63..80 "9007199254740991n" [] [],
                             },
                             r_curly_token: R_CURLY@80..81 "}" [] [],
                         },
@@ -756,7 +761,7 @@ JsModule {
                         },
                         JsxExpressionChild {
                             l_curly_token: L_CURLY@482..483 "{" [] [],
-                            expression: JsTemplate {
+                            expression: JsTemplateExpression {
                                 tag: missing (optional),
                                 type_arguments: missing (optional),
                                 l_tick_token: BACKTICK@483..484 "`" [] [],
@@ -885,8 +890,9 @@ JsModule {
   2: JS_MODULE_ITEM_LIST@0..616
     0: JS_VARIABLE_STATEMENT@0..6
       0: JS_VARIABLE_DECLARATION@0..5
-        0: LET_KW@0..4 "let" [] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@4..5
+        0: (empty)
+        1: LET_KW@0..4 "let" [] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@4..5
           0: JS_VARIABLE_DECLARATOR@4..5
             0: JS_IDENTIFIER_BINDING@4..5
               0: IDENT@4..5 "x" [] []
@@ -895,8 +901,9 @@ JsModule {
       1: SEMICOLON@5..6 ";" [] []
     1: JS_VARIABLE_STATEMENT@6..13
       0: JS_VARIABLE_DECLARATION@6..12
-        0: LET_KW@6..11 "let" [Newline("\n")] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@11..12
+        0: (empty)
+        1: LET_KW@6..11 "let" [Newline("\n")] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@11..12
           0: JS_VARIABLE_DECLARATOR@11..12
             0: JS_IDENTIFIER_BINDING@11..12
               0: IDENT@11..12 "a" [] []
@@ -905,8 +912,9 @@ JsModule {
       1: SEMICOLON@12..13 ";" [] []
     2: JS_VARIABLE_STATEMENT@13..20
       0: JS_VARIABLE_DECLARATION@13..19
-        0: LET_KW@13..18 "let" [Newline("\n")] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@18..19
+        0: (empty)
+        1: LET_KW@13..18 "let" [Newline("\n")] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@18..19
           0: JS_VARIABLE_DECLARATOR@18..19
             0: JS_IDENTIFIER_BINDING@18..19
               0: IDENT@18..19 "b" [] []
@@ -915,8 +923,9 @@ JsModule {
       1: SEMICOLON@19..20 ";" [] []
     3: JS_VARIABLE_STATEMENT@20..29
       0: JS_VARIABLE_DECLARATION@20..28
-        0: LET_KW@20..25 "let" [Newline("\n")] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@25..28
+        0: (empty)
+        1: LET_KW@20..25 "let" [Newline("\n")] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@25..28
           0: JS_VARIABLE_DECLARATOR@25..28
             0: JS_IDENTIFIER_BINDING@25..28
               0: IDENT@25..28 "key" [] []
@@ -925,8 +934,9 @@ JsModule {
       1: SEMICOLON@28..29 ";" [] []
     4: JS_VARIABLE_STATEMENT@29..47
       0: JS_VARIABLE_DECLARATION@29..46
-        0: LET_KW@29..34 "let" [Newline("\n")] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@34..46
+        0: (empty)
+        1: LET_KW@29..34 "let" [Newline("\n")] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@34..46
           0: JS_VARIABLE_DECLARATOR@34..46
             0: JS_IDENTIFIER_BINDING@34..36
               0: IDENT@34..36 "f" [] [Whitespace(" ")]
@@ -970,8 +980,8 @@ JsModule {
               0: JSX_TEXT_LITERAL@59..62 "\n  " [] []
             3: JSX_EXPRESSION_CHILD@62..81
               0: L_CURLY@62..63 "{" [] []
-              1: JS_BIG_INT_LITERAL_EXPRESSION@63..80
-                0: JS_BIG_INT_LITERAL@63..80 "9007199254740991n" [] []
+              1: JS_BIGINT_LITERAL_EXPRESSION@63..80
+                0: JS_BIGINT_LITERAL@63..80 "9007199254740991n" [] []
               2: R_CURLY@80..81 "}" [] []
             4: JSX_TEXT@81..84
               0: JSX_TEXT_LITERAL@81..84 "\n  " [] []
@@ -1408,7 +1418,7 @@ JsModule {
               0: JSX_TEXT_LITERAL@479..482 "\n  " [] []
             77: JSX_EXPRESSION_CHILD@482..486
               0: L_CURLY@482..483 "{" [] []
-              1: JS_TEMPLATE@483..485
+              1: JS_TEMPLATE_EXPRESSION@483..485
                 0: (empty)
                 1: (empty)
                 2: BACKTICK@483..484 "`" [] []

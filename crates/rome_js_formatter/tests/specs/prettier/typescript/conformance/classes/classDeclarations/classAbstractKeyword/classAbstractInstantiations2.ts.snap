@@ -1,11 +1,12 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 125
-expression: classAbstractInstantiations2.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/conformance/classes/classDeclarations/classAbstractKeyword/classAbstractInstantiations2.ts
 ---
+
 # Input
-```js
+
+```ts
 class A {
 }
 
@@ -58,8 +59,24 @@ class H {
 }
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -51,5 +51,5 @@
+ }
+ 
+ class H {
+-  abstract baz(): number;
++  abstract baz() : number;
+ }
+```
+
 # Output
-```js
+
+```ts
 class A {}
 
 abstract class B {
@@ -115,17 +132,19 @@ abstract class G {
 class H {
   abstract baz() : number;
 }
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: Only abstract classes can have abstract members
-   ┌─ classAbstractInstantiations2.ts:49:5
-   │
-49 │     abstract baz() : number;
-   │     ^^^^^^^^
+classAbstractInstantiations2.ts:49:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Only abstract classes can have abstract members
+  
+    48 │ class H {
+  > 49 │     abstract baz() : number;
+       │     ^^^^^^^^
+    50 │ }
+  
 
 ```
 

@@ -2,6 +2,7 @@
 //! This is derived from rust-analyzer/xtask/codegen
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::str::FromStr;
 use std::vec;
 
 use super::{
@@ -9,9 +10,13 @@ use super::{
     to_lower_snake_case, Mode,
 };
 use crate::css_kinds_src::CSS_KINDS_SRC;
+use crate::generate_node_factory::generate_node_factory;
+use crate::generate_nodes_mut::generate_nodes_mut;
 use crate::generate_syntax_factory::generate_syntax_factory;
 use crate::json_kinds_src::JSON_KINDS_SRC;
 use crate::kinds_src::{AstListSeparatorConfiguration, AstListSrc, TokenKind};
+use crate::termcolorful::{println_string_with_fg_color, Color};
+use crate::ALL_LANGUAGE_KIND;
 use crate::{
     generate_macros::generate_macros,
     generate_nodes::generate_nodes,
@@ -19,65 +24,88 @@ use crate::{
     kinds_src::{AstEnumSrc, AstNodeSrc, JS_KINDS_SRC},
     update, LanguageKind,
 };
+use std::fmt::Write;
 use ungrammar::{Grammar, Rule, Token};
 use xtask::{project_root, Result};
-
 // these node won't generate any code
 pub const SYNTAX_ELEMENT_TYPE: &str = "SyntaxElement";
 
-pub fn generate_ast(mode: Mode) -> Result<()> {
-    let mut ast = load_js_ast();
-    ast.sort();
-    generate_syntax(ast, &mode, LanguageKind::Js)?;
-
-    let mut ast = load_css_ast();
-    ast.sort();
-    generate_syntax(ast, &mode, LanguageKind::Css)?;
-
-    let mut ast = load_json_ast();
-    ast.sort();
-    generate_syntax(ast, &mode, LanguageKind::Json)?;
+pub fn generate_ast(mode: Mode, language_kind_list: Vec<String>) -> Result<()> {
+    let codegen_language_kinds = if language_kind_list.is_empty() {
+        ALL_LANGUAGE_KIND.clone().to_vec()
+    } else {
+        language_kind_list
+            .iter()
+            .filter_map(|kind| match LanguageKind::from_str(kind) {
+                Ok(kind) => Some(kind),
+                Err(err) => {
+                    println_string_with_fg_color(err, Color::Red);
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+    };
+    for kind in codegen_language_kinds {
+        println_string_with_fg_color(
+            format!(
+                "-------------------Generating Grammar for {}-------------------",
+                kind
+            ),
+            Color::Green,
+        );
+        let mut ast = load_ast(kind);
+        ast.sort();
+        generate_syntax(ast, &mode, kind)?;
+    }
 
     Ok(())
 }
 
+pub(crate) fn load_ast(language: LanguageKind) -> AstSrc {
+    match language {
+        LanguageKind::Js => load_js_ast(),
+        LanguageKind::Css => load_css_ast(),
+        LanguageKind::Json => load_json_ast(),
+    }
+}
+
 pub(crate) fn generate_syntax(ast: AstSrc, mode: &Mode, language_kind: LanguageKind) -> Result<()> {
-    let (nodes, kinds, factory, macros, kind_src) = match language_kind {
-        LanguageKind::Js => (
-            crate::JS_AST_NODES,
-            crate::JS_SYNTAX_KINDS,
-            crate::JS_SYNTAX_FACTORY,
-            crate::JS_AST_MACROS,
-            JS_KINDS_SRC,
-        ),
-        LanguageKind::Css => (
-            crate::CSS_AST_NODES,
-            crate::CSS_SYNTAX_KINDS,
-            crate::CSS_SYNTAX_FACTORY,
-            crate::CSS_AST_MACROS,
-            CSS_KINDS_SRC,
-        ),
-        LanguageKind::Json => (
-            crate::JSON_AST_NODES,
-            crate::JSON_SYNTAX_KINDS,
-            crate::JSON_SYNTAX_FACTORY,
-            crate::JSON_AST_MACROS,
-            JSON_KINDS_SRC,
-        ),
+    let syntax_generated_path = project_root()
+        .join("crates")
+        .join(language_kind.syntax_crate_name())
+        .join("src/generated");
+    let factory_generated_path = project_root()
+        .join("crates")
+        .join(language_kind.factory_crate_name())
+        .join("src/generated");
+
+    let kind_src = match language_kind {
+        LanguageKind::Js => JS_KINDS_SRC,
+        LanguageKind::Css => CSS_KINDS_SRC,
+        LanguageKind::Json => JSON_KINDS_SRC,
     };
-    let ast_nodes_file = project_root().join(nodes);
+
+    let ast_nodes_file = syntax_generated_path.join("nodes.rs");
     let contents = generate_nodes(&ast, language_kind)?;
     update(ast_nodes_file.as_path(), &contents, mode)?;
 
-    let syntax_kinds_file = project_root().join(kinds);
+    let ast_nodes_mut_file = syntax_generated_path.join("nodes_mut.rs");
+    let contents = generate_nodes_mut(&ast, language_kind)?;
+    update(ast_nodes_mut_file.as_path(), &contents, mode)?;
+
+    let syntax_kinds_file = syntax_generated_path.join("kind.rs");
     let contents = generate_syntax_kinds(kind_src, language_kind)?;
     update(syntax_kinds_file.as_path(), &contents, mode)?;
 
-    let syntax_factory_file = project_root().join(factory);
+    let syntax_factory_file = factory_generated_path.join("syntax_factory.rs");
     let contents = generate_syntax_factory(&ast, language_kind)?;
     update(syntax_factory_file.as_path(), &contents, mode)?;
 
-    let ast_macros_file = project_root().join(macros);
+    let node_factory_file = factory_generated_path.join("node_factory.rs");
+    let contents = generate_node_factory(&ast, language_kind)?;
+    update(node_factory_file.as_path(), &contents, mode)?;
+
+    let ast_macros_file = syntax_generated_path.join("macros.rs");
     let contents = generate_macros(&ast, language_kind)?;
     update(ast_macros_file.as_path(), &contents, mode)?;
 
@@ -106,10 +134,12 @@ fn check_unions(unions: &[AstEnumSrc]) {
                 // The variant is a compound variant
                 // Get the struct from the map
                 let current_union = union_map[variant];
-                stack_string.push_str(&format!(
+                write!(
+                    stack_string,
                     "\nSUB-ENUM CHECK : {}, variants : {:?}",
                     current_union.name, current_union.variants
-                ));
+                )
+                .unwrap();
                 // Try to insert the current variant into the set
                 if union_set.insert(&current_union.name) {
                     // Add all variants into the BFS queue
@@ -121,7 +151,8 @@ fn check_unions(unions: &[AstEnumSrc]) {
                 }
             } else {
                 // The variant isn't another enum
-                stack_string.push_str(&format!("\nBASE-VAR CHECK : {}", variant));
+                // stack_string.push_str(&format!());
+                write!(stack_string, "\nBASE-VAR CHECK : {}", variant).unwrap();
                 if !union_set.insert(variant) {
                     // The variant already used
                     println!("{}", stack_string);
@@ -178,7 +209,7 @@ fn make_ast(grammar: &Grammar) -> AstSrc {
                     fields,
                 })
             }
-            NodeRuleClassification::Unknown => ast.unknowns.push(name),
+            NodeRuleClassification::Bogus => ast.bogus.push(name),
             NodeRuleClassification::List {
                 separator,
                 element_name,
@@ -204,8 +235,8 @@ enum NodeRuleClassification {
     Union(Vec<String>),
     /// Regular node containing tokens or sub nodes of the form `A = B 'c'
     Node,
-    /// An Unknown node of the form `A = SyntaxElement*`
-    Unknown,
+    /// A bogus node of the form `A = SyntaxElement*`
+    Bogus,
 
     /// A list node of the form `A = B*` or `A = (B (',' B)*)` or `A = (B (',' B)* ','?)`
     List {
@@ -241,7 +272,7 @@ fn classify_node_rule(grammar: &Grammar, rule: &Rule) -> NodeRuleClassification 
             };
 
             if element_type == SYNTAX_ELEMENT_TYPE {
-                NodeRuleClassification::Unknown
+                NodeRuleClassification::Bogus
             } else {
                 NodeRuleClassification::List {
                     separator: None,

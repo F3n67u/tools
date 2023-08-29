@@ -1,15 +1,26 @@
-use crate::formatter::TrailingSeparator;
-use crate::{
-    join_elements, soft_line_break_or_space, token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::prelude::*;
+
+use crate::context::trailing_comma::FormatTrailingComma;
 use rome_js_syntax::TsEnumMemberList;
 
-impl ToFormatElement for TsEnumMemberList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(join_elements(
-            soft_line_break_or_space(),
-            formatter.format_separated(self, || token(","), TrailingSeparator::default())?,
-        ))
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsEnumMemberList;
+
+impl FormatRule<TsEnumMemberList> for FormatTsEnumMemberList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &TsEnumMemberList, f: &mut JsFormatter) -> FormatResult<()> {
+        let trailing_separator = FormatTrailingComma::ES5.trailing_separator(f.options());
+        let mut joiner = f.join_nodes_with_soft_line();
+
+        for variant in node
+            .format_separated(",")
+            .with_trailing_separator(trailing_separator)
+            .nodes_grouped()
+        {
+            joiner.entry(variant.node()?.syntax(), &variant)
+        }
+
+        joiner.finish()
     }
 }

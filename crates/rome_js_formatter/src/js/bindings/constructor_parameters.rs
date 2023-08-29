@@ -1,22 +1,22 @@
-use crate::{
-    formatter_traits::FormatTokenAndNode, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
 
+use crate::js::bindings::parameters::FormatAnyJsParameters;
 use rome_js_syntax::JsConstructorParameters;
-use rome_js_syntax::JsConstructorParametersFields;
 
-impl ToFormatElement for JsConstructorParameters {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsConstructorParametersFields {
-            l_paren_token,
-            parameters,
-            r_paren_token,
-        } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsConstructorParameters;
 
-        formatter.format_delimited_soft_block_indent(
-            &l_paren_token?,
-            parameters.format(formatter)?,
-            &r_paren_token?,
-        )
+impl FormatNodeRule<JsConstructorParameters> for FormatJsConstructorParameters {
+    fn fmt_fields(&self, node: &JsConstructorParameters, f: &mut JsFormatter) -> FormatResult<()> {
+        FormatAnyJsParameters::from(node.clone()).fmt(f)
+    }
+
+    fn fmt_dangling_comments(
+        &self,
+        _: &JsConstructorParameters,
+        _: &mut JsFormatter,
+    ) -> FormatResult<()> {
+        // Formatted inside of `FormatJsAnyParameters
+        Ok(())
     }
 }

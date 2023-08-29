@@ -35,8 +35,8 @@ JsModule {
         JsExpressionStatement {
             expression: JsSequenceExpression {
                 left: JsSequenceExpression {
-                    left: JsBigIntLiteralExpression {
-                        value_token: JS_BIG_INT_LITERAL@39..43 "01n" [Newline("\n")] [],
+                    left: JsBigintLiteralExpression {
+                        value_token: JS_BIGINT_LITERAL@39..43 "01n" [Newline("\n")] [],
                     },
                     comma_token: COMMA@43..45 "," [] [Whitespace(" ")],
                     right: JsNumberLiteralExpression {
@@ -50,7 +50,7 @@ JsModule {
             },
             semicolon_token: missing (optional),
         },
-        JsUnknownStatement {
+        JsBogusStatement {
             items: [
                 ERROR_TOKEN@70..76 "\"test" [Newline("\n")] [],
                 IDENT@76..86 "continues" [Newline("\n")] [],
@@ -88,8 +88,8 @@ JsModule {
     1: JS_EXPRESSION_STATEMENT@39..70
       0: JS_SEQUENCE_EXPRESSION@39..70
         0: JS_SEQUENCE_EXPRESSION@39..48
-          0: JS_BIG_INT_LITERAL_EXPRESSION@39..43
-            0: JS_BIG_INT_LITERAL@39..43 "01n" [Newline("\n")] []
+          0: JS_BIGINT_LITERAL_EXPRESSION@39..43
+            0: JS_BIGINT_LITERAL@39..43 "01n" [Newline("\n")] []
           1: COMMA@43..45 "," [] [Whitespace(" ")]
           2: JS_NUMBER_LITERAL_EXPRESSION@45..48
             0: JS_NUMBER_LITERAL@45..48 "0_0" [] []
@@ -97,103 +97,153 @@ JsModule {
         2: JS_NUMBER_LITERAL_EXPRESSION@50..70
           0: JS_NUMBER_LITERAL@50..70 "01.2" [] [Whitespace(" "), Comments("// lexer errors")]
       1: (empty)
-    2: JS_UNKNOWN_STATEMENT@70..118
+    2: JS_BOGUS_STATEMENT@70..118
       0: ERROR_TOKEN@70..76 "\"test" [Newline("\n")] []
       1: IDENT@76..86 "continues" [Newline("\n")] []
       2: ERROR_TOKEN@86..118 "\" // unterminated string literal" [] []
   3: EOF@118..119 "" [Newline("\n")] []
 --
-error[SyntaxError]: "0"-prefixed octal literals are deprecated; use the "0o" prefix instead.
-  ┌─ literals.js:1:1
-  │
-1 │ 00, 012, 08, 091, 0789 // parser errors
-  │ ^^
+literals.js:1:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × "0"-prefixed octal literals are deprecated; use the "0o" prefix instead.
+  
+  > 1 │ 00, 012, 08, 091, 0789 // parser errors
+      │ ^^
+    2 │ 01n, 0_0, 01.2 // lexer errors
+    3 │ "test
+  
 --
-error[SyntaxError]: "0"-prefixed octal literals are deprecated; use the "0o" prefix instead.
-  ┌─ literals.js:1:5
-  │
-1 │ 00, 012, 08, 091, 0789 // parser errors
-  │     ^^^
+literals.js:1:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × "0"-prefixed octal literals are deprecated; use the "0o" prefix instead.
+  
+  > 1 │ 00, 012, 08, 091, 0789 // parser errors
+      │     ^^^
+    2 │ 01n, 0_0, 01.2 // lexer errors
+    3 │ "test
+  
 --
-error[SyntaxError]: Decimals with leading zeros are not allowed in strict mode.
-  ┌─ literals.js:1:10
-  │
-1 │ 00, 012, 08, 091, 0789 // parser errors
-  │          ^^
+literals.js:1:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Decimals with leading zeros are not allowed in strict mode.
+  
+  > 1 │ 00, 012, 08, 091, 0789 // parser errors
+      │          ^^
+    2 │ 01n, 0_0, 01.2 // lexer errors
+    3 │ "test
+  
 --
-error[SyntaxError]: Decimals with leading zeros are not allowed in strict mode.
-  ┌─ literals.js:1:14
-  │
-1 │ 00, 012, 08, 091, 0789 // parser errors
-  │              ^^^
+literals.js:1:14 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Decimals with leading zeros are not allowed in strict mode.
+  
+  > 1 │ 00, 012, 08, 091, 0789 // parser errors
+      │              ^^^
+    2 │ 01n, 0_0, 01.2 // lexer errors
+    3 │ "test
+  
 --
-error[SyntaxError]: Decimals with leading zeros are not allowed in strict mode.
-  ┌─ literals.js:1:19
-  │
-1 │ 00, 012, 08, 091, 0789 // parser errors
-  │                   ^^^^
+literals.js:1:19 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Decimals with leading zeros are not allowed in strict mode.
+  
+  > 1 │ 00, 012, 08, 091, 0789 // parser errors
+      │                   ^^^^
+    2 │ 01n, 0_0, 01.2 // lexer errors
+    3 │ "test
+  
 --
-error[SyntaxError]: "0"-prefixed octal literals are deprecated; use the "0o" prefix instead.
-  ┌─ literals.js:2:11
-  │
-2 │ 01n, 0_0, 01.2 // lexer errors
-  │           ^^^^
+literals.js:2:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Octal literals are not allowed for BigInts.
+  
+    1 │ 00, 012, 08, 091, 0789 // parser errors
+  > 2 │ 01n, 0_0, 01.2 // lexer errors
+      │ ^^^
+    3 │ "test
+    4 │ continues" // unterminated string literal
+  
 --
-error[SyntaxError]: expected a statement but instead found '"test
-continues" // unterminated string literal'
-  ┌─ literals.js:3:1
-  │  
-3 │ ┌ "test
-4 │ │ continues" // unterminated string literal
-  │ └─────────────────────────────────────────^ Expected a statement here
+literals.js:2:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × numeric separator can not be used after leading 0
+  
+    1 │ 00, 012, 08, 091, 0789 // parser errors
+  > 2 │ 01n, 0_0, 01.2 // lexer errors
+      │       
+    3 │ "test
+    4 │ continues" // unterminated string literal
+  
 --
-error: Octal literals are not allowed for BigInts.
-  ┌─ literals.js:2:1
-  │
-2 │ 01n, 0_0, 01.2 // lexer errors
-  │ ^^^
+literals.js:2:11 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × unexpected number
+  
+    1 │ 00, 012, 08, 091, 0789 // parser errors
+  > 2 │ 01n, 0_0, 01.2 // lexer errors
+      │           ^^^
+    3 │ "test
+    4 │ continues" // unterminated string literal
+  
 --
-error: numeric separator can not be used after leading 0
-  ┌─ literals.js:2:7
-  │
-2 │ 01n, 0_0, 01.2 // lexer errors
-  │       ^
+literals.js:3:1 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × unterminated string literal
+  
+    1 │ 00, 012, 08, 091, 0789 // parser errors
+    2 │ 01n, 0_0, 01.2 // lexer errors
+  > 3 │ "test
+      │ ^^^^^
+    4 │ continues" // unterminated string literal
+    5 │ 
+  
+  i 
+  
+    1 │ 00, 012, 08, 091, 0789 // parser errors
+    2 │ 01n, 0_0, 01.2 // lexer errors
+  > 3 │ "test
+      │ ^^^^^
+    4 │ continues" // unterminated string literal
+    5 │ 
+  
+  i line breaks here
+  
+    1 │ 00, 012, 08, 091, 0789 // parser errors
+    2 │ 01n, 0_0, 01.2 // lexer errors
+  > 3 │ "test
+      │      
+  > 4 │ continues" // unterminated string literal
+      │ ^
+    5 │ 
+  
 --
-error: unexpected number
-  ┌─ literals.js:2:11
-  │
-2 │ 01n, 0_0, 01.2 // lexer errors
-  │           ^^^
+literals.js:4:10 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
---
-error: unterminated string literal
-  ┌─ literals.js:3:1
-  │  
-3 │   "test
-  │   ^^^^^
-  │ ┌─────'
-4 │ │ continues" // unterminated string literal
-  │ └─' line breaks here
-
---
-error: unterminated string literal
-  ┌─ literals.js:4:10
-  │  
-4 │   continues" // unterminated string literal
-  │            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  │ ┌─────────────────────────────────────────'
-5 │ │ 
-  │ └' line breaks here
-
+  × unterminated string literal
+  
+    2 │ 01n, 0_0, 01.2 // lexer errors
+    3 │ "test
+  > 4 │ continues" // unterminated string literal
+      │          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    5 │ 
+  
+  i 
+  
+    2 │ 01n, 0_0, 01.2 // lexer errors
+    3 │ "test
+  > 4 │ continues" // unterminated string literal
+      │          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    5 │ 
+  
+  i line breaks here
+  
+    2 │ 01n, 0_0, 01.2 // lexer errors
+    3 │ "test
+  > 4 │ continues" // unterminated string literal
+      │                                          
+  > 5 │ 
+      │ 
+  
 --
 00, 012, 08, 091, 0789 // parser errors
 01n, 0_0, 01.2 // lexer errors

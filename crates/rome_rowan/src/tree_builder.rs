@@ -1,7 +1,6 @@
-use crate::green::NodeCacheNodeEntryMut;
 use crate::{
     cow_mut::CowMut,
-    green::{GreenElement, NodeCache},
+    green::{GreenElement, NodeCache, NodeCacheNodeEntryMut},
     syntax::TriviaPiece,
     GreenNode, Language, NodeOrToken, ParsedChildren, SyntaxFactory, SyntaxKind, SyntaxNode,
 };
@@ -37,9 +36,10 @@ impl<L: Language, S: SyntaxFactory<Kind = L::Kind>> TreeBuilder<'_, L, S> {
         TreeBuilder::default()
     }
 
-    /// Reusing `NodeCache` between different [TreeBuilder]`s saves memory.
+    /// Reusing `NodeCache` between different [TreeBuilder]s saves memory.
     /// It allows to structurally share underlying trees.
     pub fn with_cache(cache: &mut NodeCache) -> TreeBuilder<'_, L, S> {
+        cache.increment_generation();
         TreeBuilder {
             cache: CowMut::Borrowed(cache),
             parents: Vec::new(),
@@ -50,9 +50,11 @@ impl<L: Language, S: SyntaxFactory<Kind = L::Kind>> TreeBuilder<'_, L, S> {
 
     /// Method to quickly wrap a tree with a node.
     ///
+    /// ```ignore
     /// TreeBuilder::<RawLanguage>::wrap_with_node(RawSyntaxKind(0), |builder| {
     ///     builder.token(RawSyntaxKind(1), "let");
     /// });
+    /// ```
     pub fn wrap_with_node<F>(kind: L::Kind, build: F) -> SyntaxNode<L>
     where
         F: Fn(&mut Self),
@@ -66,9 +68,10 @@ impl<L: Language, S: SyntaxFactory<Kind = L::Kind>> TreeBuilder<'_, L, S> {
 
     /// Adds new token to the current branch.
     #[inline]
-    pub fn token(&mut self, kind: L::Kind, text: &str) {
+    pub fn token(&mut self, kind: L::Kind, text: &str) -> &mut Self {
         let (hash, token) = self.cache.token(kind.to_raw(), text);
         self.children.push((hash, token.into()));
+        self
     }
 
     /// Adds new token to the current branch.
@@ -88,15 +91,16 @@ impl<L: Language, S: SyntaxFactory<Kind = L::Kind>> TreeBuilder<'_, L, S> {
 
     /// Start new node and make it current.
     #[inline]
-    pub fn start_node(&mut self, kind: L::Kind) {
+    pub fn start_node(&mut self, kind: L::Kind) -> &mut Self {
         let len = self.children.len();
         self.parents.push((kind, len));
+        self
     }
 
     /// Finish current branch and restore previous
     /// branch as current.
     #[inline]
-    pub fn finish_node(&mut self) {
+    pub fn finish_node(&mut self) -> &mut Self {
         let (kind, first_child) = self.parents.pop().unwrap();
         let raw_kind = kind.to_raw();
 
@@ -119,11 +123,12 @@ impl<L: Language, S: SyntaxFactory<Kind = L::Kind>> TreeBuilder<'_, L, S> {
             }
             NodeCacheNodeEntryMut::Cached(cached) => {
                 self.children.truncate(first_child);
-                (cached.hash(), cached.node().clone())
+                (cached.hash(), cached.node().to_owned())
             }
         };
 
         self.children.push((hash, node.into()));
+        self
     }
 
     /// Prepare for maybe wrapping the next node.
@@ -145,10 +150,10 @@ impl<L: Language, S: SyntaxFactory<Kind = L::Kind>> TreeBuilder<'_, L, S> {
     /// let checkpoint = builder.checkpoint();
     /// parser.parse_expr();
     /// if parser.peek() == Some(PLUS) {
-    ///   // 1 + 2 = Add(1, 2)
-    ///   builder.start_node_at(checkpoint, OPERATION);
-    ///   parser.parse_expr();
-    ///   builder.finish_node();
+    ///     // 1 + 2 = Add(1, 2)
+    ///     builder.start_node_at(checkpoint, OPERATION);
+    ///     parser.parse_expr();
+    ///     builder.finish_node();
     /// }
     /// ```
     #[inline]
@@ -181,13 +186,15 @@ impl<L: Language, S: SyntaxFactory<Kind = L::Kind>> TreeBuilder<'_, L, S> {
     /// are paired!
     #[inline]
     #[must_use]
-    pub fn finish(self) -> SyntaxNode<L> {
-        SyntaxNode::new_root(self.finish_green())
+    pub fn finish(mut self) -> SyntaxNode<L> {
+        let root = SyntaxNode::new_root(self.finish_green());
+        self.cache.sweep_cache();
+        root
     }
 
     // For tests
     #[must_use]
-    pub(crate) fn finish_green(mut self) -> GreenNode {
+    pub(crate) fn finish_green(&mut self) -> GreenNode {
         assert_eq!(self.children.len(), 1);
         match self.children.pop().unwrap().1 {
             NodeOrToken::Node(node) => node,

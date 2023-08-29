@@ -1,9 +1,25 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsNullLiteralType;
+use crate::prelude::*;
 
-impl ToFormatElement for TsNullLiteralType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        self.literal_token().format(formatter)
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxNode, TsNullLiteralType, TsNullLiteralTypeFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsNullLiteralType;
+
+impl FormatNodeRule<TsNullLiteralType> for FormatTsNullLiteralType {
+    fn fmt_fields(&self, node: &TsNullLiteralType, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsNullLiteralTypeFields { literal_token } = node.as_fields();
+        write![f, [literal_token.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &TsNullLiteralType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsNullLiteralType {
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

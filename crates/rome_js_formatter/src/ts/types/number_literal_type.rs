@@ -1,11 +1,32 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsNumberLiteralType;
+use crate::prelude::*;
+use rome_formatter::token::number::format_number_token;
 
-impl ToFormatElement for TsNumberLiteralType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let minus = self.minus_token().format_or_empty(formatter)?;
-        let literal = self.literal_token().format(formatter)?;
-        Ok(format_elements![minus, literal])
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxNode, TsNumberLiteralType, TsNumberLiteralTypeFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsNumberLiteralType;
+
+impl FormatNodeRule<TsNumberLiteralType> for FormatTsNumberLiteralType {
+    fn fmt_fields(&self, node: &TsNumberLiteralType, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsNumberLiteralTypeFields {
+            minus_token,
+            literal_token,
+        } = node.as_fields();
+        write![
+            f,
+            [minus_token.format(), format_number_token(&literal_token?)]
+        ]
+    }
+
+    fn needs_parentheses(&self, item: &TsNumberLiteralType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsNumberLiteralType {
+    fn needs_parentheses_with_parent(&self, _: &JsSyntaxNode) -> bool {
+        false
     }
 }

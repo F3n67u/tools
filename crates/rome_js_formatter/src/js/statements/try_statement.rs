@@ -1,27 +1,29 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::{
-    format_elements, hard_group_elements, space_token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
-
+use rome_formatter::write;
 use rome_js_syntax::JsTryStatement;
 use rome_js_syntax::JsTryStatementFields;
 
-impl ToFormatElement for JsTryStatement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsTryStatement;
+
+impl FormatNodeRule<JsTryStatement> for FormatJsTryStatement {
+    fn fmt_fields(&self, node: &JsTryStatement, f: &mut JsFormatter) -> FormatResult<()> {
         let JsTryStatementFields {
             try_token,
             body,
             catch_clause,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(hard_group_elements(format_elements![
-            try_token.format(formatter)?,
-            space_token(),
-            body.format(formatter)?,
-            space_token(),
-            catch_clause.format(formatter)?,
-        ]))
+        write![
+            f,
+            [
+                try_token.format(),
+                space(),
+                body.format(),
+                space(),
+                catch_clause.format(),
+            ]
+        ]
     }
 }

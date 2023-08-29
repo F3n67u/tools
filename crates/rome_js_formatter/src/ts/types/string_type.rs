@@ -1,9 +1,26 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
-use rome_js_syntax::TsStringType;
+use crate::prelude::*;
 
-impl ToFormatElement for TsStringType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        self.string_token().format(formatter)
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxNode, TsStringType, TsStringTypeFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsStringType;
+
+impl FormatNodeRule<TsStringType> for FormatTsStringType {
+    fn fmt_fields(&self, node: &TsStringType, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsStringTypeFields { string_token } = node.as_fields();
+
+        write![f, [string_token.format()]]
+    }
+
+    fn needs_parentheses(&self, item: &TsStringType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsStringType {
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

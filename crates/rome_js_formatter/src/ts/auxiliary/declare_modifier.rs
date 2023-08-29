@@ -1,11 +1,15 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::TsDeclareModifier;
 use rome_js_syntax::TsDeclareModifierFields;
 
-impl ToFormatElement for TsDeclareModifier {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let TsDeclareModifierFields { modifier_token } = self.as_fields();
-        modifier_token.format(formatter)
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsDeclareModifier;
+
+impl FormatNodeRule<TsDeclareModifier> for FormatTsDeclareModifier {
+    fn fmt_fields(&self, node: &TsDeclareModifier, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsDeclareModifierFields { modifier_token } = node.as_fields();
+        write![f, [modifier_token.format()]]
     }
 }

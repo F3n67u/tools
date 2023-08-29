@@ -1,25 +1,33 @@
 [package]
-name = "rome_lsp"
-version = "0.1.0"
-edition = "2021"
+authors.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+name                 = "rome_lsp"
+repository.workspace = true
+version              = "0.0.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rome_fs = {  path = "../rome_fs" }
-serde_json = "1.0.74"
-serde = { version = "1.0.133", features = ["derive"] }
-anyhow = "1.0.52"
-indexmap = "1.8.0"
-rome_js_formatter = { path = "../rome_js_formatter" }
-rome_analyze = { path = "../rome_analyze" }
-rome_diagnostics = { path = "../rome_diagnostics" }
-rome_js_parser = { path = "../rome_js_parser" }
-rome_js_syntax = { path = "../rome_js_syntax" }
-lspower = "1.5"
-tokio = { version = "1.15.0", features = ["full" ] }
-tracing = { version = "0.1.31", default-features = false, features = ["std", "max_level_trace", "release_max_level_warn"] }
-tracing-tree = "0.2.0"
-tracing-subscriber = "0.3.5"
-parking_lot = "0.12.0"
-futures = "0.3"
+anyhow            = "1.0.52"
+futures           = "0.3"
+indexmap          = { workspace = true }
+rome_analyze      = { workspace = true }
+rome_console      = { workspace = true }
+rome_diagnostics  = { workspace = true }
+rome_formatter    = { workspace = true }
+rome_fs           = { workspace = true }
+rome_js_formatter = { workspace = true }
+rome_rowan        = { workspace = true }
+rome_service      = { workspace = true }
+rome_text_edit    = { workspace = true }
+serde             = { workspace = true, features = ["derive"] }
+serde_json        = { workspace = true }
+tokio             = { workspace = true, features = ["rt", "io-std"] }
+tower-lsp         = { version = "0.19.0" }
+tracing           = { workspace = true, features = ["attributes"] }
+
+[dev-dependencies]
+proptest = "1.0.0"
+tokio    = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
+tower    = { version = "0.4.12", features = ["timeout"] }

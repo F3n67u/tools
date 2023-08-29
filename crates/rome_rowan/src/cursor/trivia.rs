@@ -1,8 +1,9 @@
 use crate::cursor::SyntaxToken;
 use crate::green::GreenTrivia;
 use crate::TriviaPiece;
+use rome_text_size::{TextRange, TextSize};
 use std::fmt;
-use text_size::{TextRange, TextSize};
+use std::iter::FusedIterator;
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub(crate) struct SyntaxTrivia {
@@ -51,7 +52,7 @@ impl SyntaxTrivia {
     }
 
     /// Get the number of TriviaPiece inside this trivia
-    fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.green_trivia().len()
     }
 
@@ -71,6 +72,11 @@ impl SyntaxTrivia {
     /// Returns the last trivia piece element
     pub(crate) fn last(&self) -> Option<&TriviaPiece> {
         self.green_trivia().pieces().last()
+    }
+
+    /// Returns the first trivia piece element
+    pub(crate) fn first(&self) -> Option<&TriviaPiece> {
+        self.green_trivia().pieces().first()
     }
 
     /// Iterate over all pieces of the trivia. The iterator returns the offset
@@ -102,6 +108,7 @@ impl fmt::Display for SyntaxTrivia {
     }
 }
 
+#[derive(Clone)]
 pub struct SyntaxTriviaPiecesIterator {
     pub(crate) raw: SyntaxTrivia,
     pub(crate) next_index: usize,
@@ -128,6 +135,8 @@ impl Iterator for SyntaxTriviaPiecesIterator {
         (len, Some(len))
     }
 }
+
+impl FusedIterator for SyntaxTriviaPiecesIterator {}
 
 impl DoubleEndedIterator for SyntaxTriviaPiecesIterator {
     fn next_back(&mut self) -> Option<Self::Item> {

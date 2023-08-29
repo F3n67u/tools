@@ -1,7 +1,19 @@
-use crate::{FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
 use rome_js_syntax::JsClassMemberList;
-impl ToFormatElement for JsClassMemberList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(formatter.format_list(self.clone()))
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsClassMemberList;
+
+impl FormatRule<JsClassMemberList> for FormatJsClassMemberList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &JsClassMemberList, f: &mut JsFormatter) -> FormatResult<()> {
+        let mut join = f.join_nodes_with_hardline();
+
+        for member in node {
+            join.entry(member.syntax(), &format_or_verbatim(member.format()));
+        }
+
+        join.finish()
     }
 }

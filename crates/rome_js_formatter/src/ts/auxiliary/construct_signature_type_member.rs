@@ -1,30 +1,36 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::utils::format_type_member_separator;
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+use rome_formatter::{format_args, write};
+
+use crate::utils::FormatTypeMemberSeparator;
+
 use rome_js_syntax::{TsConstructSignatureTypeMember, TsConstructSignatureTypeMemberFields};
 
-impl ToFormatElement for TsConstructSignatureTypeMember {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsConstructSignatureTypeMember;
+
+impl FormatNodeRule<TsConstructSignatureTypeMember> for FormatTsConstructSignatureTypeMember {
+    fn fmt_fields(
+        &self,
+        node: &TsConstructSignatureTypeMember,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
         let TsConstructSignatureTypeMemberFields {
             new_token,
             type_parameters,
             parameters,
             type_annotation,
             separator_token,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let new = new_token.format(formatter)?;
-        let type_parameters = type_parameters.format_or_empty(formatter)?;
-        let parameters = parameters.format(formatter)?;
-        let type_annotation = type_annotation.format_or_empty(formatter)?;
-        let separator_token = format_type_member_separator(separator_token, formatter);
-
-        Ok(format_elements![
-            new,
-            type_parameters,
-            parameters,
-            type_annotation,
-            separator_token,
-        ])
+        write![
+            f,
+            [
+                new_token.format(),
+                space(),
+                group(&format_args![type_parameters.format(), parameters.format()]),
+                type_annotation.format(),
+                FormatTypeMemberSeparator::new(separator_token.as_ref()),
+            ]
+        ]
     }
 }

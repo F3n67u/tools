@@ -2,8 +2,8 @@
 #![allow(unused_mut, unused_variables, unused_assignments)]
 
 use super::{LexContext, Lexer, TextSize};
+use crate::span::Span;
 use quickcheck_macros::quickcheck;
-use rome_diagnostics::Span;
 use rome_js_syntax::JsSyntaxKind::{self, EOF};
 use std::sync::mpsc::channel;
 use std::thread;
@@ -13,7 +13,7 @@ use std::time::Duration;
 // and make sure the tokens yielded are fully lossless and the source can be reconstructed from only the tokens
 macro_rules! assert_lex {
     ($src:expr, $($kind:ident:$len:expr $(,)?)*) => {{
-        let mut lexer = Lexer::from_str($src, 0);
+        let mut lexer = Lexer::from_str($src);
         let mut idx = 0;
         let mut tok_idx = TextSize::default();
 
@@ -72,7 +72,7 @@ fn losslessness(string: String) -> bool {
     let cloned = string.clone();
     let (sender, receiver) = channel();
     thread::spawn(move || {
-        let mut lexer = Lexer::from_str(&cloned, 0);
+        let mut lexer = Lexer::from_str(&cloned);
         let mut tokens = vec![];
 
         while lexer.next_token(LexContext::default()) != EOF {
@@ -1348,7 +1348,7 @@ fn keywords() {
             "Expected `JsSyntaxKind::from_keyword` to return a kind for keyword {keyword}.",
         );
 
-        let mut lexer = Lexer::from_str(keyword, 0);
+        let mut lexer = Lexer::from_str(keyword);
         lexer.next_token(LexContext::default());
 
         let lexed_kind = lexer.current();

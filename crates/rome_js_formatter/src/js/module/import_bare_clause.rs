@@ -1,21 +1,22 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
+use crate::prelude::*;
 
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-
+use rome_formatter::write;
 use rome_js_syntax::JsImportBareClause;
 use rome_js_syntax::JsImportBareClauseFields;
 
-impl ToFormatElement for JsImportBareClause {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let JsImportBareClauseFields { source, assertion } = self.as_fields();
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsImportBareClause;
 
-        let source = source.format(formatter)?;
-        let assertion = assertion.format_with_or_empty(formatter, |assertion| {
-            format_elements![space_token(), assertion]
-        })?;
+impl FormatNodeRule<JsImportBareClause> for FormatJsImportBareClause {
+    fn fmt_fields(&self, node: &JsImportBareClause, f: &mut JsFormatter) -> FormatResult<()> {
+        let JsImportBareClauseFields { source, assertion } = node.as_fields();
 
-        Ok(format_elements![source, assertion])
+        write!(f, [source.format()])?;
+
+        if let Some(assertion) = assertion {
+            write!(f, [space(), assertion.format()])?;
+        }
+
+        Ok(())
     }
 }

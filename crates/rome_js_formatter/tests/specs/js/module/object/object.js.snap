@@ -1,8 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/spec_test.rs
-expression: object.js
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: js/module/object/object.js
 ---
+
 # Input
+
+```js
 let a = {
 	...spread,
 
@@ -25,14 +28,38 @@ let a = {
 	...spread,
 }
 
+const x = {apple: "banana"};
+
+const y = {
+	apple: "banana",
+};
+
+({a, b, c} = {a: 'apple', b: 'banana', c: 'coconut'});
+
+({
+	a, b, c} = {a: 'apple', b: 'banana', c: 'coconut'});
+
+```
+
+
 =============================
+
 # Outputs
+
 ## Output 1
+
 -----
 Indent style: Tab
 Line width: 80
 Quote style: Double Quotes
+JSX quote style: Double Quotes
+Quote properties: As needed
+Trailing comma: All
+Semicolons: Always
+Arrow parentheses: Always
 -----
+
+```js
 let a = {
 	...spread,
 
@@ -52,4 +79,16 @@ let a = {
 
 	...spread,
 };
+
+const x = { apple: "banana" };
+
+const y = {
+	apple: "banana",
+};
+
+({ a, b, c } = { a: "apple", b: "banana", c: "coconut" });
+
+({ a, b, c } = { a: "apple", b: "banana", c: "coconut" });
+```
+
 

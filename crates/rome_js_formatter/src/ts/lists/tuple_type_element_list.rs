@@ -1,15 +1,22 @@
-use crate::formatter::TrailingSeparator;
-use crate::{
-    join_elements, soft_line_break_or_space, token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::context::trailing_comma::FormatTrailingComma;
+use crate::prelude::*;
 use rome_js_syntax::TsTupleTypeElementList;
 
-impl ToFormatElement for TsTupleTypeElementList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(join_elements(
-            soft_line_break_or_space(),
-            formatter.format_separated(self, || token(","), TrailingSeparator::default())?,
-        ))
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsTupleTypeElementList;
+
+impl FormatRule<TsTupleTypeElementList> for FormatTsTupleTypeElementList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &TsTupleTypeElementList, f: &mut JsFormatter) -> FormatResult<()> {
+        let trailing_separator = FormatTrailingComma::All.trailing_separator(f.options());
+
+        f.join_with(&soft_line_break_or_space())
+            .entries(
+                node.format_separated(",")
+                    .with_trailing_separator(trailing_separator)
+                    .nodes_grouped(),
+            )
+            .finish()
     }
 }

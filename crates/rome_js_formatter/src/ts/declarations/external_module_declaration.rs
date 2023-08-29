@@ -1,28 +1,41 @@
-use crate::formatter_traits::{FormatOptionalTokenAndNode, FormatTokenAndNode};
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::TsExternalModuleDeclaration;
-use rome_js_syntax::TsExternalModuleDeclarationFields;
+use crate::prelude::*;
+use rome_formatter::write;
 
-impl ToFormatElement for TsExternalModuleDeclaration {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+use rome_js_syntax::TsExternalModuleDeclarationFields;
+use rome_js_syntax::{AnyTsExternalModuleDeclarationBody, TsExternalModuleDeclaration};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsExternalModuleDeclaration;
+
+impl FormatNodeRule<TsExternalModuleDeclaration> for FormatTsExternalModuleDeclaration {
+    fn fmt_fields(
+        &self,
+        node: &TsExternalModuleDeclaration,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
         let TsExternalModuleDeclarationFields {
             body,
             module_token,
             source,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        let module_token = module_token.format(formatter)?;
-        let source = source.format(formatter)?;
-        let body = body.format_or_empty(formatter)?;
+        write!(f, [module_token.format(), space(), source.format(),])?;
 
-        Ok(format_elements![
-            module_token,
-            space_token(),
-            source,
-            space_token(),
-            body
-        ])
+        match body {
+            Some(AnyTsExternalModuleDeclarationBody::TsEmptyExternalModuleDeclarationBody(
+                body,
+            )) => {
+                body.format().fmt(f)?;
+            }
+            Some(AnyTsExternalModuleDeclarationBody::TsModuleBlock(body)) => {
+                write!(f, [space(), body.format()])?;
+            }
+            None if f.options().semicolons().is_always() => {
+                write!(f, [text(";")])?;
+            }
+            None => {}
+        }
+
+        Ok(())
     }
 }

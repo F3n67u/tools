@@ -14,15 +14,15 @@ JsModule {
             semicolon_token: missing (optional),
         },
         JsExpressionStatement {
-            expression: JsUnknownExpression {
+            expression: JsBogusExpression {
                 items: [
                     IMPORT_KW@8..15 "import" [Newline("\n")] [],
-                    JsUnknown {
+                    JsBogus {
                         items: [
                             L_PAREN@15..16 "(" [] [],
-                            JsUnknown {
+                            JsBogus {
                                 items: [
-                                    JsUnknown {
+                                    JsBogusMember {
                                         items: [
                                             DOT3@16..19 "..." [] [],
                                             JsArrayExpression {
@@ -109,12 +109,12 @@ JsModule {
           2: R_PAREN@7..8 ")" [] []
       1: (empty)
     1: JS_EXPRESSION_STATEMENT@8..27
-      0: JS_UNKNOWN_EXPRESSION@8..27
+      0: JS_BOGUS_EXPRESSION@8..27
         0: IMPORT_KW@8..15 "import" [Newline("\n")] []
-        1: JS_UNKNOWN@15..27
+        1: JS_BOGUS@15..27
           0: L_PAREN@15..16 "(" [] []
-          1: JS_UNKNOWN@16..26
-            0: JS_UNKNOWN@16..26
+          1: JS_BOGUS@16..26
+            0: JS_BOGUS_MEMBER@16..26
               0: DOT3@16..19 "..." [] []
               1: JS_ARRAY_EXPRESSION@19..26
                 0: L_BRACK@19..20 "[" [] []
@@ -158,26 +158,37 @@ JsModule {
       1: (empty)
   3: EOF@78..79 "" [Newline("\n")] []
 --
-error[SyntaxError]: `import()` requires exactly one or two arguments. 
-  ┌─ import_invalid_args.js:1:8
-  │
-1 │ import()
-  │        ^
+import_invalid_args.js:1:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × `import()` requires exactly one or two arguments. 
+  
+  > 1 │ import()
+      │        ^
+    2 │ import(...["foo"])
+    3 │ import("foo", { assert: { type: 'json' } }, "bar")
+  
 --
-error[SyntaxError]: `...` is not allowed in `import()`
-  ┌─ import_invalid_args.js:2:8
-  │
-2 │ import(...["foo"])
-  │        ^^^^^^^^^^
+import_invalid_args.js:2:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × `...` is not allowed in `import()`
+  
+    1 │ import()
+  > 2 │ import(...["foo"])
+      │        ^^^^^^^^^^
+    3 │ import("foo", { assert: { type: 'json' } }, "bar")
+    4 │ 
+  
 --
-error[SyntaxError]: `import()` requires exactly one or two arguments. 
-  ┌─ import_invalid_args.js:3:45
-  │
-3 │ import("foo", { assert: { type: 'json' } }, "bar")
-  │                                             ^^^^^^
+import_invalid_args.js:3:45 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × `import()` requires exactly one or two arguments. 
+  
+    1 │ import()
+    2 │ import(...["foo"])
+  > 3 │ import("foo", { assert: { type: 'json' } }, "bar")
+      │                                             ^^^^^^
+    4 │ 
+  
 --
 import()
 import(...["foo"])

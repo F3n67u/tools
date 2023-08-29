@@ -1,18 +1,23 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{format_elements, FormatElement, FormatResult, Formatter, ToFormatElement};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::TsDefiniteVariableAnnotation;
 use rome_js_syntax::TsDefiniteVariableAnnotationFields;
 
-impl ToFormatElement for TsDefiniteVariableAnnotation {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsDefiniteVariableAnnotation;
+
+impl FormatNodeRule<TsDefiniteVariableAnnotation> for FormatTsDefiniteVariableAnnotation {
+    fn fmt_fields(
+        &self,
+        node: &TsDefiniteVariableAnnotation,
+        f: &mut JsFormatter,
+    ) -> FormatResult<()> {
         let TsDefiniteVariableAnnotationFields {
             excl_token,
             type_annotation,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            excl_token.format(formatter)?,
-            type_annotation.format(formatter)?,
-        ])
+        write![f, [excl_token.format(), type_annotation.format()]]
     }
 }

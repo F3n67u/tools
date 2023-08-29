@@ -1,15 +1,27 @@
-use crate::formatter::TrailingSeparator;
-use crate::{
-    join_elements, soft_line_break_or_space, token, FormatElement, FormatResult, Formatter,
-    ToFormatElement,
-};
+use crate::prelude::*;
+use crate::utils::write_arguments_multi_line;
+use rome_formatter::write;
 use rome_js_syntax::JsCallArgumentList;
 
-impl ToFormatElement for JsCallArgumentList {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        Ok(join_elements(
-            soft_line_break_or_space(),
-            formatter.format_separated(self, || token(","), TrailingSeparator::default())?,
-        ))
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsCallArgumentList;
+
+impl FormatRule<JsCallArgumentList> for FormatJsCallArgumentList {
+    type Context = JsFormatContext;
+
+    fn fmt(&self, node: &JsCallArgumentList, f: &mut JsFormatter) -> FormatResult<()> {
+        if node.len() == 0 {
+            return Ok(());
+        }
+
+        write!(
+            f,
+            [&group(&soft_block_indent(&format_with(|f| {
+                let separated = node
+                    .format_separated(",")
+                    .with_trailing_separator(TrailingSeparator::Omit);
+                write_arguments_multi_line(separated, f)
+            })))]
+        )
     }
 }

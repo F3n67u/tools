@@ -1,13 +1,38 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-use rome_js_syntax::TsTypeofType;
+use crate::prelude::*;
 
-impl ToFormatElement for TsTypeofType {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
-        let r#typeof = self.typeof_token().format(formatter)?;
-        let expression_name = self.expression_name().format(formatter)?;
-        Ok(format_elements![r#typeof, space_token(), expression_name])
+use crate::parentheses::NeedsParentheses;
+use rome_formatter::write;
+use rome_js_syntax::{JsSyntaxNode, TsTypeofType, TsTypeofTypeFields};
+
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsTypeofType;
+
+impl FormatNodeRule<TsTypeofType> for FormatTsTypeofType {
+    fn fmt_fields(&self, node: &TsTypeofType, f: &mut JsFormatter) -> FormatResult<()> {
+        let TsTypeofTypeFields {
+            type_arguments,
+            typeof_token,
+            expression_name,
+        } = node.as_fields();
+
+        write![
+            f,
+            [
+                typeof_token.format(),
+                space(),
+                expression_name.format(),
+                type_arguments.format()
+            ]
+        ]
+    }
+
+    fn needs_parentheses(&self, item: &TsTypeofType) -> bool {
+        item.needs_parentheses()
+    }
+}
+
+impl NeedsParentheses for TsTypeofType {
+    fn needs_parentheses_with_parent(&self, _parent: &JsSyntaxNode) -> bool {
+        false
     }
 }

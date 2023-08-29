@@ -1,20 +1,35 @@
-use crate::formatter_traits::FormatTokenAndNode;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
+use crate::prelude::*;
+
+use rome_formatter::write;
 use rome_js_syntax::{TsPropertyParameter, TsPropertyParameterFields};
 
-impl ToFormatElement for TsPropertyParameter {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub struct FormatTsPropertyParameter;
+
+impl FormatNodeRule<TsPropertyParameter> for FormatTsPropertyParameter {
+    fn fmt_fields(&self, node: &TsPropertyParameter, f: &mut JsFormatter) -> FormatResult<()> {
         let TsPropertyParameterFields {
+            decorators,
             modifiers,
             formal_parameter,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        Ok(format_elements![
-            modifiers.format(formatter)?,
-            space_token(),
-            formal_parameter.format(formatter)?
-        ])
+        let content = format_with(|f| {
+            write![
+                f,
+                [
+                    decorators.format(),
+                    modifiers.format(),
+                    space(),
+                    formal_parameter.format()
+                ]
+            ]
+        });
+
+        if decorators.is_empty() {
+            write![f, [content]]
+        } else {
+            write![f, [group(&content)]]
+        }
     }
 }

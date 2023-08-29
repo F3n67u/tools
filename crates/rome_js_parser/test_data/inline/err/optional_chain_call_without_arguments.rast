@@ -4,6 +4,7 @@ JsModule {
     items: JsModuleItemList [
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@0..4 "let" [] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -88,8 +89,9 @@ JsModule {
   2: JS_MODULE_ITEM_LIST@0..46
     0: JS_VARIABLE_STATEMENT@0..23
       0: JS_VARIABLE_DECLARATION@0..22
-        0: LET_KW@0..4 "let" [] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@4..22
+        0: (empty)
+        1: LET_KW@0..4 "let" [] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@4..22
           0: JS_VARIABLE_DECLARATOR@4..22
             0: JS_IDENTIFIER_BINDING@4..6
               0: IDENT@4..6 "a" [] [Whitespace(" ")]
@@ -138,19 +140,43 @@ JsModule {
       1: SEMICOLON@45..46 ";" [] []
   3: EOF@46..47 "" [Newline("\n")] []
 --
-error[SyntaxError]: expected an identifier but instead found ';'
-  ┌─ optional_chain_call_without_arguments.ts:2:9
-  │
-2 │ a.test?.;
-  │         ^ Expected an identifier here
+optional_chain_call_without_arguments.ts:2:9 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an identifier but instead found ';'
+  
+    1 │ let a = { test: null };
+  > 2 │ a.test?.;
+      │         ^
+    3 │ a.test?.<ab;
+    4 │ 
+  
+  i Expected an identifier here
+  
+    1 │ let a = { test: null };
+  > 2 │ a.test?.;
+      │         ^
+    3 │ a.test?.<ab;
+    4 │ 
+  
 --
-error[SyntaxError]: expected an identifier but instead found '<'
-  ┌─ optional_chain_call_without_arguments.ts:3:9
-  │
-3 │ a.test?.<ab;
-  │         ^ Expected an identifier here
+optional_chain_call_without_arguments.ts:3:9 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected an identifier but instead found '<'
+  
+    1 │ let a = { test: null };
+    2 │ a.test?.;
+  > 3 │ a.test?.<ab;
+      │         ^
+    4 │ 
+  
+  i Expected an identifier here
+  
+    1 │ let a = { test: null };
+    2 │ a.test?.;
+  > 3 │ a.test?.<ab;
+      │         ^
+    4 │ 
+  
 --
 let a = { test: null };
 a.test?.;

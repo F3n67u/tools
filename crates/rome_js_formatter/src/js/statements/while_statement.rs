@@ -1,35 +1,33 @@
-use crate::formatter_traits::FormatTokenAndNode;
+use crate::prelude::*;
 
-use crate::utils::format_head_body_statement;
-use crate::{
-    format_elements, space_token, FormatElement, FormatResult, Formatter, ToFormatElement,
-};
-
+use crate::utils::FormatStatementBody;
+use rome_formatter::{format_args, write};
 use rome_js_syntax::JsWhileStatement;
 use rome_js_syntax::JsWhileStatementFields;
 
-impl ToFormatElement for JsWhileStatement {
-    fn to_format_element(&self, formatter: &Formatter) -> FormatResult<FormatElement> {
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FormatJsWhileStatement;
+
+impl FormatNodeRule<JsWhileStatement> for FormatJsWhileStatement {
+    fn fmt_fields(&self, node: &JsWhileStatement, f: &mut JsFormatter) -> FormatResult<()> {
         let JsWhileStatementFields {
             while_token,
             l_paren_token,
             test,
             r_paren_token,
             body,
-        } = self.as_fields();
+        } = node.as_fields();
 
-        format_head_body_statement(
-            formatter,
-            format_elements![
-                while_token.format(formatter)?,
-                space_token(),
-                formatter.format_delimited_soft_block_indent(
-                    &l_paren_token?,
-                    test.format(formatter)?,
-                    &r_paren_token?,
-                )?,
-            ],
-            body?,
+        write!(
+            f,
+            [group(&format_args![
+                while_token.format(),
+                space(),
+                l_paren_token.format(),
+                group(&soft_block_indent(&test.format())),
+                r_paren_token.format(),
+                FormatStatementBody::new(&body?)
+            ])]
         )
     }
 }

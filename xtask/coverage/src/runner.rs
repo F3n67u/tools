@@ -1,10 +1,12 @@
 use super::*;
 use crate::reporters::TestReporter;
-use rome_diagnostics::file::{FileId, SimpleFiles};
+use rome_diagnostics::console::fmt::{Formatter, Termcolor};
+use rome_diagnostics::console::markup;
 use rome_diagnostics::termcolor::Buffer;
-use rome_diagnostics::{Diagnostic, Emitter, Severity};
-use rome_js_parser::{parse, Parse, SourceType};
-use rome_js_syntax::{JsAnyRoot, JsSyntaxNode};
+use rome_diagnostics::Error;
+use rome_diagnostics::PrintDiagnostic;
+use rome_js_parser::{parse, JsParserOptions, Parse};
+use rome_js_syntax::{AnyJsRoot, JsFileSource, JsSyntaxNode};
 use rome_rowan::SyntaxKind;
 use std::fmt::Debug;
 use std::panic::RefUnwindSafe;
@@ -75,36 +77,32 @@ pub(crate) struct TestCaseFile {
     code: String,
 
     /// The source type used to parse the file
-    source_type: SourceType,
+    source_type: JsFileSource,
 
-    id: FileId,
+    options: JsParserOptions,
 }
 
 impl TestCaseFile {
-    pub(crate) fn parse(&self) -> Parse<JsAnyRoot> {
-        parse(&self.code, self.id, self.source_type.clone())
+    pub(crate) fn parse(&self) -> Parse<AnyJsRoot> {
+        parse(&self.code, self.source_type, self.options.clone())
     }
 
     pub(crate) fn name(&self) -> &str {
         &self.name
     }
 
-    pub(crate) fn id(&self) -> FileId {
-        self.id
+    pub(crate) fn code(&self) -> &str {
+        &self.code
     }
 }
 
-pub(crate) fn create_unknown_node_in_tree_diagnostic(
-    file_id: FileId,
-    node: JsSyntaxNode,
-) -> Diagnostic {
-    assert!(node.kind().is_unknown());
-    Diagnostic::new(
-        file_id,
-        Severity::Bug,
-        "There are no parse errors but the parsed tree contains unknown nodes.",
+pub(crate) fn create_bogus_node_in_tree_diagnostic(node: JsSyntaxNode) -> ParseDiagnostic {
+    assert!(node.kind().is_bogus());
+    ParseDiagnostic::new(
+        "There are no parse errors but the parsed tree contains bogus nodes.",
+        node.text_trimmed_range()
     )
-        .primary(node.text_trimmed_range(), "This unknown node is present in the parsed tree but the parser didn't emit a diagnostic for it. Change the parser to either emit a diagnostic, fix the grammar, or the parsing.")
+    .hint( "This bogus node is present in the parsed tree but the parser didn't emit a diagnostic for it. Change the parser to either emit a diagnostic, fix the grammar, or the parsing.")
 }
 
 #[derive(Clone, Debug)]
@@ -113,13 +111,18 @@ pub(crate) struct TestCaseFiles {
 }
 
 impl TestCaseFiles {
-    pub(crate) fn single(name: String, code: String, source_type: SourceType) -> Self {
+    pub(crate) fn single(
+        name: String,
+        code: String,
+        source_type: JsFileSource,
+        options: JsParserOptions,
+    ) -> Self {
         Self {
             files: vec![TestCaseFile {
                 name,
                 code,
                 source_type,
-                id: 0,
+                options,
             }],
         }
     }
@@ -128,12 +131,18 @@ impl TestCaseFiles {
         Self { files: vec![] }
     }
 
-    pub(crate) fn add(&mut self, name: String, code: String, source_type: SourceType) {
+    pub(crate) fn add(
+        &mut self,
+        name: String,
+        code: String,
+        source_type: JsFileSource,
+        options: JsParserOptions,
+    ) {
         self.files.push(TestCaseFile {
             name,
             code,
             source_type,
-            id: self.files.len(),
+            options,
         })
     }
 
@@ -141,16 +150,11 @@ impl TestCaseFiles {
         self.files.is_empty()
     }
 
-    pub(crate) fn emit_errors(&self, errors: &[ParseDiagnostic], buffer: &mut Buffer) {
-        let mut diag_files = SimpleFiles::new();
-
-        for file in &self.files {
-            diag_files.add(file.name.clone(), file.code.clone());
-        }
-
-        let mut emitter = Emitter::new(&diag_files);
+    pub(crate) fn emit_errors(&self, errors: &[Error], buffer: &mut Buffer) {
         for error in errors {
-            if let Err(err) = emitter.emit_with_writer(error, buffer) {
+            if let Err(err) = Formatter::new(&mut Termcolor(&mut *buffer)).write_markup(markup! {
+                {PrintDiagnostic::verbose(error)}
+            }) {
                 eprintln!("Failed to print diagnostic: {}", err);
             }
         }
@@ -163,18 +167,6 @@ impl<'a> IntoIterator for &'a TestCaseFiles {
 
     fn into_iter(self) -> Self::IntoIter {
         self.files.iter()
-    }
-}
-
-impl From<TestCaseFiles> for SimpleFiles {
-    fn from(files: TestCaseFiles) -> Self {
-        let mut result = SimpleFiles::new();
-
-        for file in files.files {
-            result.add(file.name, file.code);
-        }
-
-        result
     }
 }
 
@@ -233,7 +225,58 @@ pub(crate) fn run_test_suite(
     let instance = load_tests(test_suite, context);
     context.reporter.test_suite_run_started(&instance);
 
-    std::panic::set_hook(Box::new(|_| {}));
+    std::panic::set_hook(Box::new(|info| {
+        use std::io::Write;
+
+        let backtrace = backtrace::Backtrace::default();
+        let mut stacktrace = vec![];
+
+        // Skip frames inside the backtrace lib
+        for frame in backtrace.frames().iter().skip(6) {
+            if let Some(s) = frame.symbols().get(0) {
+                if let Some(file) = s.filename() {
+                    // We don't care about std or cargo registry libs
+                    let file_path = file.as_os_str().to_str().unwrap();
+                    if file_path.starts_with("/rustc") || file_path.contains(".cargo") {
+                        continue;
+                    }
+
+                    let _ = write!(stacktrace, "{}", file.display());
+                } else if let Some(name) = s.name().and_then(|x| x.as_str()) {
+                    let _ = write!(stacktrace, "{}", name);
+                } else {
+                    let _ = write!(stacktrace, "<unknown>");
+                }
+
+                match (s.lineno(), s.colno()) {
+                    (Some(line), Some(col)) => {
+                        let _ = write!(stacktrace, " @ line {} col {}", line, col);
+                    }
+                    (Some(line), None) => {
+                        let _ = write!(stacktrace, " @ line {}", line);
+                    }
+                    (None, Some(col)) => {
+                        let _ = write!(stacktrace, " @ col {}", col);
+                    }
+                    _ => {}
+                }
+
+                let _ = writeln!(stacktrace);
+            }
+        }
+
+        let stacktrace = String::from_utf8(stacktrace).unwrap();
+
+        let mut msg = vec![];
+        let _ = write!(msg, "{}", info);
+        let msg = String::from_utf8(msg).unwrap();
+
+        tracing::error!(
+            panic = msg.as_str(),
+            stacktrace = stacktrace.as_str(),
+            "Test panicked"
+        );
+    }));
 
     let mut test_results = TestResults::new();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -256,9 +299,23 @@ pub(crate) fn run_test_suite(
 
             scope.execute(move || {
                 let test_ref = test.as_ref();
-                let run_result = std::panic::catch_unwind(|| test_ref.run());
 
-                let outcome = run_result.unwrap_or_else(|panic| TestRunOutcome::Panicked(panic));
+                let outcome = match std::panic::catch_unwind(|| test_ref.run()) {
+                    Ok(result) => result,
+                    Err(panic) => {
+                        let error = panic
+                            .downcast_ref::<String>()
+                            .map(|x| x.to_string())
+                            .or_else(|| panic.downcast_ref::<&str>().map(|x| x.to_string()))
+                            .unwrap_or_default();
+                        tracing::error!(
+                            panic = error.as_str(),
+                            name = test.name(),
+                            "Test panicked"
+                        );
+                        TestRunOutcome::Panicked(panic)
+                    }
+                };
 
                 tx.send(TestRunResult {
                     test_case: test.name().to_owned(),

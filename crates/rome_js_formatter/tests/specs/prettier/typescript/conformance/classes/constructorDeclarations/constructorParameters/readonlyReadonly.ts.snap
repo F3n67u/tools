@@ -1,44 +1,96 @@
 ---
-source: crates/rome_js_formatter/tests/prettier_tests.rs
-assertion_line: 125
-expression: readonlyReadonly.ts
-
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+assertion_line: 212
+info: typescript/conformance/classes/constructorDeclarations/constructorParameters/readonlyReadonly.ts
 ---
+
 # Input
-```js
+
+```ts
 class C {
     readonly readonly x: number;
     constructor(readonly readonly y: number) {}
 }
 ```
 
+
+# Prettier differences
+
+```diff
+--- Prettier
++++ Rome
+@@ -1,4 +1,4 @@
+ class C {
+-  readonly x: number;
+-  constructor(readonly y: number) {}
++  readonly readonly x: number;
++  constructor(readonly readonly y: number) {}
+ }
+```
+
 # Output
-```js
+
+```ts
 class C {
   readonly readonly x: number;
   constructor(readonly readonly y: number) {}
 }
-
 ```
 
 # Errors
 ```
-error[SyntaxError]: 'readonly' already seen
-  ┌─ readonlyReadonly.ts:2:14
-  │
-2 │     readonly readonly x: number;
-  │     -------- ^^^^^^^^ duplicate modifier
-  │     │         
-  │     first seen here
+readonlyReadonly.ts:2:14 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-error[SyntaxError]: 'readonly' already seen
-  ┌─ readonlyReadonly.ts:3:26
-  │
-3 │     constructor(readonly readonly y: number) {}
-  │                 -------- ^^^^^^^^ duplicate modifier
-  │                 │         
-  │                 first seen here
+  × 'readonly' already seen
+  
+    1 │ class C {
+  > 2 │     readonly readonly x: number;
+      │              ^^^^^^^^
+    3 │     constructor(readonly readonly y: number) {}
+    4 │ }
+  
+  i duplicate modifier
+  
+    1 │ class C {
+  > 2 │     readonly readonly x: number;
+      │              ^^^^^^^^
+    3 │     constructor(readonly readonly y: number) {}
+    4 │ }
+  
+  i first seen here
+  
+    1 │ class C {
+  > 2 │     readonly readonly x: number;
+      │     ^^^^^^^^
+    3 │     constructor(readonly readonly y: number) {}
+    4 │ }
+  
+readonlyReadonly.ts:3:26 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × 'readonly' already seen
+  
+    1 │ class C {
+    2 │     readonly readonly x: number;
+  > 3 │     constructor(readonly readonly y: number) {}
+      │                          ^^^^^^^^
+    4 │ }
+  
+  i duplicate modifier
+  
+    1 │ class C {
+    2 │     readonly readonly x: number;
+  > 3 │     constructor(readonly readonly y: number) {}
+      │                          ^^^^^^^^
+    4 │ }
+  
+  i first seen here
+  
+    1 │ class C {
+    2 │     readonly readonly x: number;
+  > 3 │     constructor(readonly readonly y: number) {}
+      │                 ^^^^^^^^
+    4 │ }
+  
 
 ```
 

@@ -1,8 +1,11 @@
 ---
-source: crates/rome_js_formatter/tests/spec_test.rs
-expression: import_type.ts
+source: crates/rome_formatter_test/src/snapshot_builder.rs
+info: ts/type/import_type.ts
 ---
+
 # Input
+
+```ts
 type ImportType1 = typeof import('source');
 
 type ImportType2 = import('source');
@@ -10,17 +13,32 @@ type ImportType2 = import('source');
 type QualifiedImportType = typeof import('source').Qualified<TypeParams>;
 
 
+```
+
+
 =============================
+
 # Outputs
+
 ## Output 1
+
 -----
 Indent style: Tab
 Line width: 80
 Quote style: Double Quotes
+JSX quote style: Double Quotes
+Quote properties: As needed
+Trailing comma: All
+Semicolons: Always
+Arrow parentheses: Always
 -----
+
+```ts
 type ImportType1 = typeof import("source");
 
 type ImportType2 = import("source");
 
 type QualifiedImportType = typeof import("source").Qualified<TypeParams>;
+```
+
 

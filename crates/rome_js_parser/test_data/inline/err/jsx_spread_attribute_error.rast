@@ -4,6 +4,7 @@ JsModule {
     items: JsModuleItemList [
         JsVariableStatement {
             declaration: JsVariableDeclaration {
+                await_token: missing (optional),
                 kind: LET_KW@0..4 "let" [] [Whitespace(" ")],
                 declarators: JsVariableDeclaratorList [
                     JsVariableDeclarator {
@@ -36,7 +37,7 @@ JsModule {
                         JsxSpreadAttribute {
                             l_curly_token: L_CURLY@17..18 "{" [] [],
                             dotdotdot_token: DOT3@18..21 "..." [] [],
-                            argument: JsUnknownExpression {
+                            argument: JsBogusExpression {
                                 items: [
                                     JsIdentifierExpression {
                                         name: JsReferenceIdentifier {
@@ -159,8 +160,9 @@ JsModule {
   2: JS_MODULE_ITEM_LIST@0..169
     0: JS_VARIABLE_STATEMENT@0..13
       0: JS_VARIABLE_DECLARATION@0..12
-        0: LET_KW@0..4 "let" [] [Whitespace(" ")]
-        1: JS_VARIABLE_DECLARATOR_LIST@4..12
+        0: (empty)
+        1: LET_KW@0..4 "let" [] [Whitespace(" ")]
+        2: JS_VARIABLE_DECLARATOR_LIST@4..12
           0: JS_VARIABLE_DECLARATOR@4..12
             0: JS_IDENTIFIER_BINDING@4..8
               0: IDENT@4..8 "obj" [] [Whitespace(" ")]
@@ -183,7 +185,7 @@ JsModule {
             0: JSX_SPREAD_ATTRIBUTE@17..33
               0: L_CURLY@17..18 "{" [] []
               1: DOT3@18..21 "..." [] []
-              2: JS_UNKNOWN_EXPRESSION@21..31
+              2: JS_BOGUS_EXPRESSION@21..31
                 0: JS_IDENTIFIER_EXPRESSION@21..24
                   0: JS_REFERENCE_IDENTIFIER@21..24
                     0: IDENT@21..24 "obj" [] []
@@ -259,33 +261,58 @@ JsModule {
       1: SEMICOLON@168..169 ";" [] []
   3: EOF@169..170 "" [Newline("\n")] []
 --
-error[SyntaxError]: Comma operator isn't a valid value for a JSX spread argument.
-  ┌─ jsx_spread_attribute_error.jsx:2:8
-  │
-2 │ <a {...obj, other} />;
-  │        ^^^^^^^^^^
+jsx_spread_attribute_error.jsx:2:8 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × Comma operator isn't a valid value for a JSX spread argument.
+  
+    1 │ let obj = {};
+  > 2 │ <a {...obj, other} />;
+      │        ^^^^^^^^^^
+    3 │ <a ...obj} />;
+    4 │ <a {obj} />;
+  
 --
-error[SyntaxError]: expected `'{'` but instead found `...`
-  ┌─ jsx_spread_attribute_error.jsx:3:4
-  │
-3 │ <a ...obj} />;
-  │    ^^^ unexpected
+jsx_spread_attribute_error.jsx:3:4 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `{` but instead found `...`
+  
+    1 │ let obj = {};
+    2 │ <a {...obj, other} />;
+  > 3 │ <a ...obj} />;
+      │    ^^^
+    4 │ <a {obj} />;
+    5 │ <div
+  
+  i Remove ...
+  
 --
-error[SyntaxError]: expected `...` but instead found `obj`
-  ┌─ jsx_spread_attribute_error.jsx:4:5
-  │
-4 │ <a {obj} />;
-  │     ^^^ unexpected
+jsx_spread_attribute_error.jsx:4:5 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `...` but instead found `obj`
+  
+    2 │ <a {...obj, other} />;
+    3 │ <a ...obj} />;
+  > 4 │ <a {obj} />;
+      │     ^^^
+    5 │ <div
+    6 │       {...{} /*
+  
+  i Remove obj
+  
 --
-error[SyntaxError]: expected `'}'` but instead found `invalidProp`
-  ┌─ jsx_spread_attribute_error.jsx:8:7
-  │
-8 │       invalidProp="HelloWorld"
-  │       ^^^^^^^^^^^ unexpected
+jsx_spread_attribute_error.jsx:8:7 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  × expected `}` but instead found `invalidProp`
+  
+     6 │       {...{} /*
+     7 │       // @ts-ignore */ /* prettier-ignore */
+   > 8 │       invalidProp="HelloWorld"
+       │       ^^^^^^^^^^^
+     9 │     />;
+    10 │ 
+  
+  i Remove invalidProp
+  
 --
 let obj = {};
 <a {...obj, other} />;
